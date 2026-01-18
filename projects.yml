@@ -21,7 +21,6 @@
     projects:
       - { name: "zone", repo: "git@github.com:visio-soft/zone.git", db: "zone_db", user: "zone_user" }
       - { name: "gate", repo: "git@github.com:visio-soft/gate.git", db: "gate_db", user: "gate_user" }
-      - { name: "bikamyon", repo: "git@github.com:bikamyon1/bikamyon.git", db: "bikamyon_db", user: "bikamyon_user" }
 
   tasks:
     # ==================================================================
