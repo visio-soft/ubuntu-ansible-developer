@@ -26,14 +26,15 @@ declare -A COMPONENTS=(
     ["projects"]=1
 )
 
-COMPONENT_NAMES=(
-    "system:Sistem Paketleri (git, curl, acl, supervisor)"
-    "php:PHP 8.4 + Composer + Extensions"
-    "nodejs:Node.js 20 + NPM"
-    "database:PostgreSQL + Redis"
-    "nginx:Nginx + Valet Linux"
-    "devtools:VS Code + DBeaver"
-    "projects:Proje Kurulumları (clone, migrate, horizon)"
+COMPONENT_KEYS=("system" "php" "nodejs" "database" "nginx" "devtools" "projects")
+COMPONENT_LABELS=(
+    "Sistem Paketleri (git, curl, acl, supervisor)"
+    "PHP 8.4 + Composer + Extensions"
+    "Node.js 20 + NPM"
+    "PostgreSQL + Redis"
+    "Nginx + Valet Linux"
+    "VS Code + DBeaver"
+    "Proje Kurulumları (clone, migrate, horizon)"
 )
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -59,50 +60,21 @@ toggle_component() {
     fi
 }
 
-display_menu() {
-    clear
-    print_header "Ubuntu Developer Setup - Kurulum Seçenekleri"
-    
-    echo -e "Kurmak istediğiniz bileşenleri seçin (numara ile toggle):\n"
-    
-    local i=1
-    for item in "${COMPONENT_NAMES[@]}"; do
-        local key="${item%%:*}"
-        local name="${item#*:}"
-        local status="${COMPONENTS[$key]}"
-        
-        if [ "$status" -eq 1 ]; then
-            echo -e "  ${GREEN}[$i] ✓ $name${NC}"
-        else
-            echo -e "  ${RED}[$i] ✗ $name${NC}"
-        fi
-        ((i++))
-    done
-    
-    echo ""
-    echo -e "  ${CYAN}[a] Tümünü Seç${NC}"
-    echo -e "  ${CYAN}[n] Tümünü Kaldır${NC}"
-    echo -e "  ${CYAN}[s] Kurulumu Başlat${NC}"
-    echo -e "  ${CYAN}[q] Çıkış${NC}"
-    echo ""
-}
-
 select_all() {
-    for key in "${!COMPONENTS[@]}"; do
+    for key in "${COMPONENT_KEYS[@]}"; do
         COMPONENTS[$key]=1
     done
 }
 
 select_none() {
-    for key in "${!COMPONENTS[@]}"; do
+    for key in "${COMPONENT_KEYS[@]}"; do
         COMPONENTS[$key]=0
     done
 }
 
 get_selected_tags() {
     local tags=""
-    for item in "${COMPONENT_NAMES[@]}"; do
-        local key="${item%%:*}"
+    for key in "${COMPONENT_KEYS[@]}"; do
         if [ "${COMPONENTS[$key]}" -eq 1 ] && [ "$key" != "projects" ]; then
             if [ -n "$tags" ]; then
                 tags="$tags,$key"
@@ -112,6 +84,32 @@ get_selected_tags() {
         fi
     done
     echo "$tags"
+}
+
+display_menu() {
+    clear
+    print_header "Ubuntu Developer Setup - Kurulum Seçenekleri"
+    
+    echo -e "Kurmak istediğiniz bileşenleri seçin (numara ile toggle):\n"
+    
+    for i in "${!COMPONENT_KEYS[@]}"; do
+        local key="${COMPONENT_KEYS[$i]}"
+        local label="${COMPONENT_LABELS[$i]}"
+        local num=$((i + 1))
+        
+        if [ "${COMPONENTS[$key]}" -eq 1 ]; then
+            echo -e "  ${GREEN}[$num] ✓ $label${NC}"
+        else
+            echo -e "  ${RED}[$num] ✗ $label${NC}"
+        fi
+    done
+    
+    echo ""
+    echo -e "  ${CYAN}[a] Tümünü Seç${NC}"
+    echo -e "  ${CYAN}[n] Tümünü Kaldır${NC}"
+    echo -e "  ${CYAN}[s] Kurulumu Başlat${NC}"
+    echo -e "  ${CYAN}[q] Çıkış${NC}"
+    echo ""
 }
 
 run_installation() {
@@ -158,17 +156,13 @@ while true; do
     read -p "Seçiminiz: " choice
     
     case $choice in
-        [1-7])
-            local i=1
-            for item in "${COMPONENT_NAMES[@]}"; do
-                if [ "$i" -eq "$choice" ]; then
-                    local key="${item%%:*}"
-                    toggle_component "$key"
-                    break
-                fi
-                ((i++))
-            done
-            ;;
+        1) toggle_component "system" ;;
+        2) toggle_component "php" ;;
+        3) toggle_component "nodejs" ;;
+        4) toggle_component "database" ;;
+        5) toggle_component "nginx" ;;
+        6) toggle_component "devtools" ;;
+        7) toggle_component "projects" ;;
         a|A) select_all ;;
         n|N) select_none ;;
         s|S) run_installation; exit 0 ;;
