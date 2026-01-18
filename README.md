@@ -28,7 +28,9 @@ git clone https://github.com/visio-soft/ubuntu-ansible-developer.git && cd ubunt
 ## 🎛️ Installation Menu
 
 
-<img width="518" height="390" alt="image" src="https://github.com/user-attachments/assets/74be8482-5822-40a3-90c9-ff727db887c9" />
+<img width="428" height="342" alt="image" src="https://github.com/user-attachments/assets/1eba7608-ef68-4c54-aab3-1ce995a42a84" />
+
+
 
 All components are selected by default:
 
@@ -68,4 +70,4 @@ valet status                  # Check Valet
 sudo supervisorctl status     # Check Horizon
 ```
 
-Projects available at: `http://project-name.test`
+Projects available at: `http://project.test`
