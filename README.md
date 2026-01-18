@@ -2,7 +2,23 @@
 
 Ansible playbooks for setting up a Laravel development environment on **Ubuntu 24.04**.
 
-## 📁 Dosya Yapısı
+## � Quick Start
+
+```bash
+# Download and run
+git clone https://github.com/visio-soft/ubuntu-ansible-developer.git
+cd ubuntu-ansible-developer
+chmod +x run.sh
+./run.sh
+```
+
+Or **one-liner** (copy & paste):
+
+```bash
+git clone https://github.com/visio-soft/ubuntu-ansible-developer.git && cd ubuntu-ansible-developer && chmod +x run.sh && ./run.sh
+```
+
+## �📁 Dosya Yapısı
 
 | Dosya | Açıklama |
 |-------|----------|
@@ -10,14 +26,9 @@ Ansible playbooks for setting up a Laravel development environment on **Ubuntu 2
 | `projects.yml` | Proje kurulumları (clone, migrate, horizon) |
 | `run.sh` | İnteraktif kurulum scripti |
 
-## 🚀 Kurulum
+## 🎛️ Kurulum Menüsü
 
-```bash
-chmod +x run.sh
-./run.sh
-```
-
-Script açıldığında tüm bileşenler seçili gelir. İstediğinizi toggle edebilirsiniz:
+Script açıldığında tüm bileşenler seçili gelir:
 
 ```
 [1] ✓ Sistem Paketleri (git, curl, acl, supervisor)
@@ -34,7 +45,7 @@ Script açıldığında tüm bileşenler seçili gelir. İstediğinizi toggle ed
 ## ⚡ Hızlı Kurulum (Menüsüz)
 
 ```bash
-./run.sh --all    # Tüm bileşenleri kur
+./run.sh --all
 ```
 
 ## ⚙️ Proje Ayarları
@@ -45,6 +56,8 @@ Script açıldığında tüm bileşenler seçili gelir. İstediğinizi toggle ed
 projects:
   - { name: "myapp", repo: "git@github.com:user/repo.git", db: "myapp_db", user: "myapp_user" }
 ```
+
+**Proje dizini:** `/var/www/projects` (tüm www-data kullanıcıları erişebilir)
 
 ## 📊 Kurulum Sonrası
 
