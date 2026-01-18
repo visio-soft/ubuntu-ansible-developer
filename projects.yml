@@ -8,9 +8,9 @@
     projects_dir: "/var/www/projects"
     shared_group: "www-data"
     
-    # Current user (will be added to www-data group)
-    current_user: "{{ lookup('env', 'SUDO_USER') | default(lookup('env', 'USER'), true) }}"
-    current_home: "/home/{{ current_user }}"
+    # Current user - detect properly even with sudo
+    current_user: "{{ lookup('env', 'SUDO_USER') | default(ansible_user_id, true) }}"
+    current_home: "{{ '/root' if current_user == 'root' else '/home/' + current_user }}"
     
     valet_bin: "{{ current_home }}/.config/composer/vendor/bin/valet"
     composer_bin: "/usr/local/bin/composer"
@@ -36,6 +36,16 @@
     # ==================================================================
     # SSH KEY FOR GITHUB
     # ==================================================================
+    - name: Generate SSH Key if not exists
+      become_user: "{{ current_user }}"
+      shell: |
+        if [ ! -f {{ current_home }}/.ssh/id_ed25519 ]; then
+          mkdir -p {{ current_home }}/.ssh
+          ssh-keygen -t ed25519 -f {{ current_home }}/.ssh/id_ed25519 -N ""
+        fi
+      args:
+        creates: "{{ current_home }}/.ssh/id_ed25519"
+
     - name: Read Public Key
       command: "cat {{ current_home }}/.ssh/id_ed25519.pub"
       register: ssh_key
