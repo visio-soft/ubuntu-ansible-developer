@@ -27,6 +27,9 @@ git clone https://github.com/visio-soft/ubuntu-ansible-developer.git && cd ubunt
 
 ## 🎛️ Installation Menu
 
+
+<img width="518" height="390" alt="image" src="https://github.com/user-attachments/assets/74be8482-5822-40a3-90c9-ff727db887c9" />
+
 All components are selected by default:
 
 ```
