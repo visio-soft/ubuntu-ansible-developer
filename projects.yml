@@ -11,8 +11,10 @@
     # Current user - can be passed as extra-var or detected from environment
     current_user: "{{ target_user | default(lookup('env', 'SUDO_USER') | default(ansible_user_id, true)) }}"
     current_home: "{{ '/root' if current_user == 'root' else '/home/' + current_user }}"
+    # Use /opt/valet for composer/valet when running as root to avoid Valet's /root directory restriction
+    composer_home: "{{ '/opt/valet' if current_user == 'root' else current_home }}"
     
-    valet_bin: "{{ current_home }}/.config/composer/vendor/bin/valet"
+    valet_bin: "{{ composer_home }}/.config/composer/vendor/bin/valet"
     composer_bin: "/usr/local/bin/composer"
     php_bin: "/usr/bin/php"
     db_pass: "secret"
@@ -77,6 +79,14 @@
     # ==================================================================
     # SHARED DIRECTORY SETUP
     # ==================================================================
+    - name: Create Composer Home Directory for Root User
+      file:
+        path: "{{ composer_home }}/.config/composer"
+        state: directory
+        owner: "{{ current_user }}"
+        mode: '0755'
+      when: current_user == 'root'
+
     - name: Create Shared Projects Directory
       file:
         path: "{{ projects_dir }}"
@@ -89,6 +99,8 @@
       become_user: "{{ current_user }}"
       become_flags: '-i'
       shell: "{{ valet_bin }} install"
+      environment:
+        COMPOSER_HOME: "{{ composer_home }}/.config/composer"
       ignore_errors: yes
 
     - name: Valet Park Projects Directory
@@ -96,6 +108,8 @@
       become_flags: '-i'
       shell: "{{ valet_bin }} park"
       args: { chdir: "{{ projects_dir }}" }
+      environment:
+        COMPOSER_HOME: "{{ composer_home }}/.config/composer"
       ignore_errors: yes
 
     - name: Clone Projects

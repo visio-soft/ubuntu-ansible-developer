@@ -9,10 +9,12 @@
     # =========================================================
     target_user: "{{ target_user | default(lookup('env', 'SUDO_USER') | default(ansible_user_id, true)) }}"
     target_home: "{{ '/root' if target_user == 'root' else '/home/' + target_user }}"
+    # Use /opt/valet for composer/valet when running as root to avoid Valet's /root directory restriction
+    composer_home: "{{ '/opt/valet' if target_user == 'root' else target_home }}"
     projects_dir: "{{ target_home }}/projects"
     
     # Paths
-    valet_bin: "{{ target_home }}/.config/composer/vendor/bin/valet"
+    valet_bin: "{{ composer_home }}/.config/composer/vendor/bin/valet"
     composer_bin: "/usr/local/bin/composer"
     php_bin: "/usr/bin/php"
     
@@ -167,6 +169,14 @@
     # ==================================================================
     # SECTION 4: VALET AND PROJECT SETUP (USER MODE)
     # ==================================================================
+    - name: 13a. Create Composer Home Directory for Root User
+      file:
+        path: "{{ composer_home }}/.config/composer"
+        state: directory
+        owner: "{{ target_user }}"
+        mode: '0755'
+      when: target_user == 'root'
+
     - name: 13. Valet Linux Installation
       become: yes
       become_user: "{{ target_user }}"
@@ -174,9 +184,13 @@
       block:
         - name: Install Valet
           shell: "composer global require cpriego/valet-linux"
+          environment:
+            COMPOSER_HOME: "{{ composer_home }}/.config/composer"
           
         - name: Valet Install
           shell: "{{ valet_bin }} install"
+          environment:
+            COMPOSER_HOME: "{{ composer_home }}/.config/composer"
           ignore_errors: yes
 
         - name: Create Projects Directory
@@ -185,6 +199,8 @@
         - name: Valet Park
           shell: "{{ valet_bin }} park"
           args: { chdir: "{{ projects_dir }}" }
+          environment:
+            COMPOSER_HOME: "{{ composer_home }}/.config/composer"
           ignore_errors: yes
 
     - name: 14. Clone Projects

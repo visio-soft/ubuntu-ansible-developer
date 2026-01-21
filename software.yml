@@ -6,6 +6,8 @@
   vars:
     target_user: "{{ target_user | default(lookup('env', 'SUDO_USER') | default(ansible_user_id, true)) }}"
     target_home: "{{ '/root' if target_user == 'root' else '/home/' + target_user }}"
+    # Use /opt/valet for composer/valet when running as root to avoid Valet's /root directory restriction
+    composer_home: "{{ '/opt/valet' if target_user == 'root' else target_home }}"
     php_ver: "8.4"
     node_ver: "20"
     ansible_remote_tmp: /tmp
@@ -141,12 +143,25 @@
         state: latest
       tags: [nginx]
 
+    - name: Create Composer Home Directory for Root User
+      file:
+        path: "{{ composer_home }}/.config/composer"
+        state: directory
+        owner: "{{ target_user }}"
+        mode: '0755'
+      when: target_user == 'root'
+      tags: [nginx]
+
     - name: Install Valet Linux
       become_user: "{{ target_user }}"
       become_flags: '-i'
       block:
         - shell: "composer global require cpriego/valet-linux"
-        - shell: "{{ target_home }}/.config/composer/vendor/bin/valet install"
+          environment:
+            COMPOSER_HOME: "{{ composer_home }}/.config/composer"
+        - shell: "{{ composer_home }}/.config/composer/vendor/bin/valet install"
+          environment:
+            COMPOSER_HOME: "{{ composer_home }}/.config/composer"
           ignore_errors: yes
       tags: [nginx]
 
