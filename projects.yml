@@ -8,8 +8,8 @@
     projects_dir: "/var/www/projects"
     shared_group: "www-data"
     
-    # Current user - detect properly even with sudo
-    current_user: "{{ lookup('env', 'SUDO_USER') | default(ansible_user_id, true) }}"
+    # Current user - can be passed as extra-var or detected from environment
+    current_user: "{{ target_user | default(lookup('env', 'SUDO_USER') | default(ansible_user_id, true)) }}"
     current_home: "{{ '/root' if current_user == 'root' else '/home/' + current_user }}"
     
     valet_bin: "{{ current_home }}/.config/composer/vendor/bin/valet"

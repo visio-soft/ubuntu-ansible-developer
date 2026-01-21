@@ -7,7 +7,7 @@
     # =========================================================
     # 1. SETTINGS
     # =========================================================
-    target_user: "fatihalp"
+    target_user: "{{ target_user | default(lookup('env', 'SUDO_USER') | default(ansible_user_id, true)) }}"
     target_home: "/home/{{ target_user }}"
     projects_dir: "{{ target_home }}/projects"
     

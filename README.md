@@ -4,6 +4,10 @@ Ansible playbooks for setting up a Laravel development environment on **Ubuntu 2
 
 ## 🚀 Quick Start
 
+The installation script will first ask you to choose the target user for installation:
+- **Option 1**: Install for the current user (recommended)
+- **Option 2**: Install for another user (useful for creating a separate development user)
+
 ```bash
 git clone https://github.com/visio-soft/ubuntu-ansible-developer.git
 cd ubuntu-ansible-developer
@@ -24,6 +28,23 @@ git clone https://github.com/visio-soft/ubuntu-ansible-developer.git && cd ubunt
 | `software.yml` | Software installation (PHP, Node, DB, IDE) |
 | `projects.yml` | Project setup (clone, migrate, horizon) |
 | `run.sh` | Interactive installation script |
+
+## 👤 User Selection
+
+During installation, you'll be prompted to choose the target user:
+
+**Option 1 - Current User:**
+- Installs everything for the user running the script
+- Recommended for personal development environments
+- All tools configured in your home directory
+
+**Option 2 - Another User:**
+- Specify a different username for installation
+- User will be created if it doesn't exist
+- Useful for:
+  - Creating a dedicated development user
+  - Setting up environments for team members
+  - Separating development from your main user account
 
 ## 🎛️ Installation Menu
 
