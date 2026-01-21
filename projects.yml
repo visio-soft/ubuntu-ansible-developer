@@ -108,7 +108,6 @@
       when: 
         - current_user != 'root'
         - valet_install_result is defined
-        - valet_install_result.rc is defined
         - valet_install_result.rc == 0
 
     - name: Clone Projects

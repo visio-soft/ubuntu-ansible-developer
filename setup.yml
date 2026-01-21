@@ -196,7 +196,6 @@
           failed_when: false
           when: 
             - valet_install_result is defined
-            - valet_install_result.rc is defined
             - valet_install_result.rc == 0
 
     - name: 14. Clone Projects
