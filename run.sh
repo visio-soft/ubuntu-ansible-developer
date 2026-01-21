@@ -23,10 +23,11 @@ declare -A COMPONENTS=(
     ["database"]=1
     ["nginx"]=1
     ["devtools"]=1
+    ["antigravity"]=1
     ["projects"]=1
 )
 
-COMPONENT_KEYS=("system" "php" "nodejs" "database" "nginx" "devtools" "projects")
+COMPONENT_KEYS=("system" "php" "nodejs" "database" "nginx" "devtools" "antigravity" "projects")
 COMPONENT_LABELS=(
     "System Packages (git, curl, acl, supervisor)"
     "PHP 8.4 + Composer + Extensions"
@@ -34,6 +35,7 @@ COMPONENT_LABELS=(
     "PostgreSQL + Redis"
     "Nginx + Valet Linux"
     "VS Code + DBeaver"
+    "Google Antigravity Editor"
     "Project Setup (clone, migrate, horizon)"
 )
 
@@ -162,7 +164,8 @@ while true; do
         4) toggle_component "database" ;;
         5) toggle_component "nginx" ;;
         6) toggle_component "devtools" ;;
-        7) toggle_component "projects" ;;
+        7) toggle_component "antigravity" ;;
+        8) toggle_component "projects" ;;
         a|A) select_all ;;
         n|N) select_none ;;
         s|S) run_installation; exit 0 ;;
