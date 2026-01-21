@@ -176,6 +176,35 @@
         state: latest
       tags: [devtools]
 
+    # ==================================================================
+    # SECTION 7: GOOGLE ANTIGRAVITY EDITOR
+    # ==================================================================
+    - name: Create APT Keyrings Directory for Antigravity
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+      tags: [antigravity]
+
+    - name: Add Google Antigravity Repository Key
+      shell: |
+        curl -fsSL https://us-central1-apt.pkg.dev/doc/repo-signing-key.gpg | gpg --dearmor --yes -o /etc/apt/keyrings/antigravity-repo-key.gpg
+      args: { creates: /etc/apt/keyrings/antigravity-repo-key.gpg }
+      tags: [antigravity]
+
+    - name: Add Google Antigravity Repository
+      shell: |
+        echo "deb [signed-by=/etc/apt/keyrings/antigravity-repo-key.gpg] https://us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev/ antigravity-debian main" | tee /etc/apt/sources.list.d/antigravity.list > /dev/null
+      args: { creates: /etc/apt/sources.list.d/antigravity.list }
+      tags: [antigravity]
+
+    - name: Install Google Antigravity Editor
+      apt:
+        update_cache: yes
+        name: antigravity
+        state: latest
+      tags: [antigravity]
+
     - name: 🏁 Software Installation Complete
       debug:
         msg: "All selected software has been installed successfully!"

@@ -41,7 +41,8 @@ All components are selected by default:
 [4] ✓ PostgreSQL + Redis
 [5] ✓ Nginx + Valet Linux
 [6] ✓ VS Code + DBeaver
-[7] ✓ Project Setup
+[7] ✓ Google Antigravity Editor
+[8] ✓ Project Setup
 
 [a] Select All  [n] Select None  [s] Start  [q] Quit
 ```
