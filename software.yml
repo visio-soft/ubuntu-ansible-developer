@@ -5,7 +5,7 @@
   become: yes
   vars:
     target_user: "{{ target_user | default(lookup('env', 'SUDO_USER') | default(ansible_user_id, true)) }}"
-    target_home: "/home/{{ target_user }}"
+    target_home: "{{ '/root' if target_user == 'root' else '/home/' + target_user }}"
     php_ver: "8.4"
     node_ver: "20"
     ansible_remote_tmp: /tmp
