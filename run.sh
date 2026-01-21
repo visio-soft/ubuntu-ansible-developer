@@ -194,7 +194,7 @@ run_installation() {
     if [ "${COMPONENTS["projects"]}" -eq 1 ]; then
         print_header "Project Setup (projects.yml)"
         print_info "Setting up projects for user: $TARGET_USER"
-        sudo ansible-playbook "$SCRIPT_DIR/projects.yml"
+        sudo ansible-playbook "$SCRIPT_DIR/projects.yml" --extra-vars "target_user=$TARGET_USER"
     fi
     
     print_header "Installation Complete! 🎉"
