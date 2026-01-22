@@ -41,8 +41,9 @@ COMPONENT_LABELS=(
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Target user for installation (set by user selection)
-TARGET_USER=""
+# Target user for installation (always current user)
+CURRENT_USER="${SUDO_USER:-$USER}"
+TARGET_USER="$CURRENT_USER"
 
 # Functions
 print_header() {
@@ -55,58 +56,6 @@ print_success() { echo -e "${GREEN}✓ $1${NC}"; }
 print_warning() { echo -e "${YELLOW}⚠ $1${NC}"; }
 print_error() { echo -e "${RED}✗ $1${NC}"; }
 print_info() { echo -e "${BLUE}ℹ $1${NC}"; }
-
-prompt_for_user() {
-    clear
-    print_header "User Selection for Installation"
-    
-    # Get current user (works even with sudo)
-    CURRENT_USER="${SUDO_USER:-$USER}"
-    
-    echo -e "${CYAN}Installation can be performed for:${NC}\n"
-    echo -e "  ${YELLOW}1)${NC} Current user: ${GREEN}$CURRENT_USER${NC}"
-    echo -e "     - Software and projects will be installed in /home/$CURRENT_USER"
-    echo -e "     - SSH keys and Composer will be set up for this user"
-    echo -e "     - User will be added to www-data group for shared access"
-    echo ""
-    echo -e "  ${YELLOW}2)${NC} Another user (specify username)"
-    echo -e "     - Useful for setting up a separate development user"
-    echo -e "     - User will be created if it doesn't exist"
-    echo -e "     - All development tools will be configured for that user"
-    echo ""
-    echo -e "${CYAN}───────────────────────────────────────────────────────────${NC}\n"
-    
-    while true; do
-        read -p "Your choice (1 or 2): " user_choice
-        
-        case $user_choice in
-            1)
-                TARGET_USER="$CURRENT_USER"
-                print_success "Installation will be performed for user: $TARGET_USER"
-                sleep 1
-                break
-                ;;
-            2)
-                while true; do
-                    read -p "Enter username: " custom_user
-                    if [ -z "$custom_user" ]; then
-                        print_error "Username cannot be empty"
-                    elif [[ ! "$custom_user" =~ ^[a-z_][a-z0-9_-]*$ ]]; then
-                        print_error "Invalid username format (use lowercase letters, numbers, underscore, hyphen)"
-                    else
-                        TARGET_USER="$custom_user"
-                        print_success "Installation will be performed for user: $TARGET_USER"
-                        sleep 1
-                        break 2
-                    fi
-                done
-                ;;
-            *)
-                print_error "Invalid choice. Please enter 1 or 2"
-                ;;
-        esac
-    done
-}
 
 toggle_component() {
     local key=$1
@@ -209,15 +158,10 @@ run_installation() {
 
 # Check for --all flag (skip menu)
 if [ "$1" == "--all" ] || [ "$1" == "-a" ]; then
-    # Prompt for user selection even in --all mode
-    prompt_for_user
     select_all
     run_installation
     exit 0
 fi
-
-# Prompt for user selection before showing menu
-prompt_for_user
 
 # Interactive menu
 while true; do
