@@ -12,9 +12,9 @@
     current_user: "{{ target_user | default(lookup('env', 'SUDO_USER') | default(ansible_user_id, true)) }}"
     current_home: "{{ '/root' if current_user == 'root' else '/home/' + current_user }}"
     
-    valet_bin: "{{ current_home }}/.config/composer/vendor/bin/valet"
     composer_bin: "/usr/local/bin/composer"
     php_bin: "/usr/bin/php"
+    php_fpm_sock: "/run/php/php8.4-fpm.sock"
     db_pass: "secret"
     ansible_remote_tmp: /tmp
 
@@ -85,19 +85,6 @@
         group: "{{ shared_group }}"
         mode: '2775'  # setgid bit - new files inherit group
 
-    - name: Ensure Valet is Installed
-      become_user: "{{ current_user }}"
-      become_flags: '-i'
-      shell: "{{ valet_bin }} install"
-      ignore_errors: yes
-
-    - name: Valet Park Projects Directory
-      become_user: "{{ current_user }}"
-      become_flags: '-i'
-      shell: "{{ valet_bin }} park"
-      args: { chdir: "{{ projects_dir }}" }
-      ignore_errors: yes
-
     - name: Clone Projects
       become_user: "{{ current_user }}"
       become_flags: '-i'
@@ -160,6 +147,89 @@
         group: "{{ shared_group }}"
         mode: '2775'
       loop: "{{ projects }}"
+
+    # ==================================================================
+    # NGINX CONFIGURATION
+    # ==================================================================
+    - name: Create Nginx Server Blocks for Projects
+      copy:
+        dest: "/etc/nginx/sites-available/{{ item.name }}.test"
+        content: |
+          server {
+              listen 80;
+              listen [::]:80;
+              server_name {{ item.name }}.test;
+              root {{ projects_dir }}/{{ item.name }}/public;
+
+              add_header X-Frame-Options "SAMEORIGIN";
+              add_header X-Content-Type-Options "nosniff";
+
+              index index.php;
+
+              charset utf-8;
+
+              location / {
+                  try_files $uri $uri/ /index.php?$query_string;
+              }
+
+              location = /favicon.ico { access_log off; log_not_found off; }
+              location = /robots.txt  { access_log off; log_not_found off; }
+
+              error_page 404 /index.php;
+
+              location ~ \.php$ {
+                  fastcgi_pass unix:{{ php_fpm_sock }};
+                  fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+                  fastcgi_split_path_info ^(.+\.php)(/.+)$;
+                  fastcgi_index index.php;
+                  include fastcgi_params;
+                  fastcgi_param PATH_INFO $fastcgi_path_info;
+              }
+
+              location ~ /\.(?!well-known).* {
+                  deny all;
+              }
+          }
+      loop: "{{ projects }}"
+
+    - name: Enable Nginx Server Blocks
+      file:
+        src: "/etc/nginx/sites-available/{{ item.name }}.test"
+        dest: "/etc/nginx/sites-enabled/{{ item.name }}.test"
+        state: link
+      loop: "{{ projects }}"
+
+    - name: Add Projects to /etc/hosts
+      lineinfile:
+        path: /etc/hosts
+        regexp: "^127\\.0\\.0\\.1\\s+{{ item.name }}\\.test"
+        line: "127.0.0.1 {{ item.name }}.test"
+        state: present
+      loop: "{{ projects }}"
+
+    - name: Test Nginx Configuration
+      command: nginx -t
+      register: nginx_test
+      changed_when: false
+      failed_when: false
+
+    - name: Display Nginx Test Errors
+      debug:
+        msg: 
+          - "Nginx configuration test failed!"
+          - "Error output: {{ nginx_test.stderr }}"
+      when: nginx_test.rc != 0
+
+    - name: Fail if Nginx Test Failed
+      fail:
+        msg: "Nginx configuration is invalid. Please check the error message above."
+      when: nginx_test.rc != 0
+
+    - name: Reload Nginx
+      systemd:
+        name: nginx
+        state: reloaded
+      when: nginx_test.rc == 0
 
     # ==================================================================
     # SUPERVISOR (Horizon)

@@ -33,7 +33,7 @@ COMPONENT_LABELS=(
     "PHP 8.4 + Composer + Extensions"
     "Node.js 20 + NPM"
     "PostgreSQL + Redis"
-    "Nginx + Valet Linux"
+    "Nginx"
     "VS Code + DBeaver"
     "Google Antigravity Editor"
     "Project Setup (clone, migrate, horizon)"
@@ -66,7 +66,7 @@ prompt_for_user() {
     echo -e "${CYAN}Installation can be performed for:${NC}\n"
     echo -e "  ${YELLOW}1)${NC} Current user: ${GREEN}$CURRENT_USER${NC}"
     echo -e "     - Software and projects will be installed in /home/$CURRENT_USER"
-    echo -e "     - SSH keys, Composer, Valet will be set up for this user"
+    echo -e "     - SSH keys and Composer will be set up for this user"
     echo -e "     - User will be added to www-data group for shared access"
     echo ""
     echo -e "  ${YELLOW}2)${NC} Another user (specify username)"
@@ -203,7 +203,7 @@ run_installation() {
     echo -e "Installation user: ${GREEN}$TARGET_USER${NC}"
     echo -e "Next steps:"
     echo -e "  1. Log out and back in: ${YELLOW}source ~/.bashrc${NC}"
-    echo -e "  2. Check Valet: ${YELLOW}valet status${NC}"
+    echo -e "  2. Check Nginx: ${YELLOW}sudo systemctl status nginx${NC}"
     echo -e "  3. Check Horizon: ${YELLOW}sudo supervisorctl status${NC}"
 }
 

@@ -91,6 +91,13 @@
       args: { creates: /usr/local/bin/composer }
       tags: [php]
 
+    - name: Enable and Start PHP-FPM
+      systemd:
+        name: "php{{ php_ver }}-fpm"
+        enabled: yes
+        state: started
+      tags: [php]
+
     # ==================================================================
     # SECTION 3: NODE.JS
     # ==================================================================
@@ -129,25 +136,20 @@
       tags: [database]
 
     # ==================================================================
-    # SECTION 5: NGINX & VALET
+    # SECTION 5: NGINX
     # ==================================================================
-    - name: Install Nginx and Valet Dependencies
+    - name: Install Nginx
       apt:
         name:
           - nginx
-          - libnss3-tools
-          - jq
-          - xsel
         state: latest
       tags: [nginx]
 
-    - name: Install Valet Linux
-      become_user: "{{ target_user }}"
-      become_flags: '-i'
-      block:
-        - shell: "composer global require cpriego/valet-linux"
-        - shell: "{{ target_home }}/.config/composer/vendor/bin/valet install"
-          ignore_errors: yes
+    - name: Enable and Start Nginx
+      systemd:
+        name: nginx
+        enabled: yes
+        state: started
       tags: [nginx]
 
     # ==================================================================

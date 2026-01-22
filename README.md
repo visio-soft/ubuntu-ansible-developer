@@ -60,7 +60,7 @@ All components are selected by default:
 [2] ✓ PHP 8.4 + Composer + Extensions
 [3] ✓ Node.js 20 + NPM
 [4] ✓ PostgreSQL + Redis
-[5] ✓ Nginx + Valet Linux
+[5] ✓ Nginx
 [6] ✓ VS Code + DBeaver
 [7] ✓ Google Antigravity Editor
 [8] ✓ Project Setup
@@ -88,8 +88,8 @@ projects:
 ## 📊 Post Installation
 
 ```bash
-valet status                  # Check Valet
-sudo supervisorctl status     # Check Horizon
+sudo systemctl status nginx      # Check Nginx
+sudo supervisorctl status         # Check Horizon
 ```
 
 Projects available at: `http://project.test`
