@@ -91,6 +91,13 @@
       args: { creates: /usr/local/bin/composer }
       tags: [php]
 
+    - name: Enable and Start PHP-FPM
+      systemd:
+        name: "php{{ php_ver }}-fpm"
+        enabled: yes
+        state: started
+      tags: [php]
+
     # ==================================================================
     # SECTION 3: NODE.JS
     # ==================================================================

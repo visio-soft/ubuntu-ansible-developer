@@ -150,6 +150,12 @@
       shell: curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
       args: { creates: /usr/local/bin/composer }
 
+    - name: 11b. Enable and Start PHP-FPM
+      systemd:
+        name: "php{{ php_ver }}-fpm"
+        enabled: yes
+        state: started
+
     # ==================================================================
     # SECTION 3: DATABASE
     # ==================================================================
@@ -284,6 +290,7 @@
     - name: 16e. Add Projects to /etc/hosts
       lineinfile:
         path: /etc/hosts
+        regexp: "^127\\.0\\.0\\.1\\s+{{ item.name }}\\.test"
         line: "127.0.0.1 {{ item.name }}.test"
         state: present
       loop: "{{ projects }}"

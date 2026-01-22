@@ -199,6 +199,7 @@
     - name: Add Projects to /etc/hosts
       lineinfile:
         path: /etc/hosts
+        regexp: "^127\\.0\\.0\\.1\\s+{{ item.name }}\\.test"
         line: "127.0.0.1 {{ item.name }}.test"
         state: present
       loop: "{{ projects }}"
