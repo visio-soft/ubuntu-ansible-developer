@@ -128,8 +128,6 @@
           - redis-server
           - postgresql
           - postgresql-client
-          - jq
-          - xsel
           - dbeaver-ce
           - code
           - nodejs
