@@ -299,6 +299,19 @@
       command: nginx -t
       register: nginx_test
       changed_when: false
+      failed_when: false
+
+    - name: 16f2. Display Nginx Test Errors
+      debug:
+        msg: 
+          - "Nginx configuration test failed!"
+          - "Error output: {{ nginx_test.stderr }}"
+      when: nginx_test.rc != 0
+
+    - name: 16f3. Fail if Nginx Test Failed
+      fail:
+        msg: "Nginx configuration is invalid. Please check the error message above."
+      when: nginx_test.rc != 0
 
     - name: 16g. Reload Nginx
       systemd:
