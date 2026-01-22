@@ -42,8 +42,7 @@ COMPONENT_LABELS=(
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Target user for installation (always current user)
-CURRENT_USER="${SUDO_USER:-$USER}"
-TARGET_USER="$CURRENT_USER"
+TARGET_USER="${SUDO_USER:-$USER}"
 
 # Functions
 print_header() {
