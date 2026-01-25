@@ -102,7 +102,9 @@
         fi
         
         # Install Sail configuration (pgsql, redis)
-        php artisan sail:install --with=pgsql,redis
+        if [ ! -f docker-compose.yml ]; then
+          php artisan sail:install --with=pgsql,redis
+        fi
         
         # Update .env for Sail
         sed -i "s/^DB_HOST=.*/DB_HOST=pgsql/" .env
@@ -173,7 +175,25 @@
 
     - name: Wait for containers to be ready
       pause:
-        seconds: 10
+        seconds: 20
+    
+    - name: Check if containers are healthy
+      become_user: "{{ current_user }}"
+      shell: |
+        for i in {1..30}; do
+          if docker ps | grep -q "{{ item.name }}.*Up"; then
+            echo "Container is up"
+            exit 0
+          fi
+          sleep 2
+        done
+        echo "Container did not start in time"
+        exit 1
+      args:
+        chdir: "{{ projects_dir }}/{{ item.name }}"
+      loop: "{{ projects }}"
+      register: container_health
+      failed_when: false
 
     - name: Run migrations and setup in Sail
       become_user: "{{ current_user }}"
