@@ -18,25 +18,21 @@ NC='\033[0m'
 # Installation options (all enabled by default)
 declare -A COMPONENTS=(
     ["system"]=1
-    ["php"]=1
+    ["docker"]=1
     ["nodejs"]=1
-    ["database"]=1
-    ["nginx"]=1
     ["devtools"]=1
     ["antigravity"]=1
     ["projects"]=1
 )
 
-COMPONENT_KEYS=("system" "php" "nodejs" "database" "nginx" "devtools" "antigravity" "projects")
+COMPONENT_KEYS=("system" "docker" "nodejs" "devtools" "antigravity" "projects")
 COMPONENT_LABELS=(
     "System Packages (git, curl, acl, supervisor)"
-    "PHP 8.4 + Composer + Extensions"
+    "Docker + Docker Compose (for Laravel Sail)"
     "Node.js 20 + NPM"
-    "PostgreSQL + Redis"
-    "Nginx"
     "VS Code + DBeaver"
     "Google Antigravity Editor"
-    "Project Setup (clone, migrate, horizon)"
+    "Project Setup (Sail, containers, migrate)"
 )
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -150,9 +146,10 @@ run_installation() {
     print_header "Installation Complete! 🎉"
     echo -e "Installation user: ${GREEN}$TARGET_USER${NC}"
     echo -e "Next steps:"
-    echo -e "  1. Log out and back in: ${YELLOW}source ~/.bashrc${NC}"
-    echo -e "  2. Check Nginx: ${YELLOW}sudo systemctl status nginx${NC}"
-    echo -e "  3. Check Horizon: ${YELLOW}sudo supervisorctl status${NC}"
+    echo -e "  1. Log out and back in to apply Docker group: ${YELLOW}newgrp docker${NC}"
+    echo -e "  2. Navigate to project: ${YELLOW}cd /var/www/projects/zone${NC}"
+    echo -e "  3. Start Sail containers: ${YELLOW}./vendor/bin/sail up -d${NC}"
+    echo -e "  4. Check containers: ${YELLOW}docker ps${NC}"
 }
 
 # Check for --all flag (skip menu)
@@ -169,13 +166,11 @@ while true; do
     
     case $choice in
         1) toggle_component "system" ;;
-        2) toggle_component "php" ;;
+        2) toggle_component "docker" ;;
         3) toggle_component "nodejs" ;;
-        4) toggle_component "database" ;;
-        5) toggle_component "nginx" ;;
-        6) toggle_component "devtools" ;;
-        7) toggle_component "antigravity" ;;
-        8) toggle_component "projects" ;;
+        4) toggle_component "devtools" ;;
+        5) toggle_component "antigravity" ;;
+        6) toggle_component "projects" ;;
         a|A) select_all ;;
         n|N) select_none ;;
         s|S) run_installation; exit 0 ;;
