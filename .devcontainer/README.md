@@ -49,7 +49,10 @@ After installation, verify services:
 
 ```bash
 # Check service status
-sudo systemctl status nginx postgresql redis-server php8.4-fpm
+sudo systemctl status nginx postgresql redis-server
+
+# Check PHP-FPM status (version installed by setup script)
+sudo systemctl status php*-fpm
 
 # Check Horizon status
 supervisorctl status
