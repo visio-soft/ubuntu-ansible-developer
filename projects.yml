@@ -162,6 +162,18 @@
     # ==================================================================
     # START SAIL CONTAINERS
     # ==================================================================
+    - name: Check if Sail binary exists
+      stat:
+        path: "{{ projects_dir }}/{{ item.name }}/vendor/bin/sail"
+      loop: "{{ projects }}"
+      register: sail_binary_check
+
+    - name: Warning for missing Sail binary
+      debug:
+        msg: "⚠️  WARNING: Laravel Sail binary not found for {{ item.item.name }}. Skipping container startup. Check if composer install completed successfully."
+      loop: "{{ sail_binary_check.results }}"
+      when: not item.stat.exists
+
     - name: Start Laravel Sail Containers
       become_user: "{{ current_user }}"
       become_flags: '-i'
@@ -170,6 +182,7 @@
       args:
         chdir: "{{ projects_dir }}/{{ item.name }}"
       loop: "{{ projects }}"
+      when: sail_binary_check.results[ansible_loop.index0].stat.exists
       environment:
         HOME: "{{ current_home }}"
 
@@ -206,6 +219,7 @@
       args:
         chdir: "{{ projects_dir }}/{{ item.name }}"
       loop: "{{ projects }}"
+      when: sail_binary_check.results[ansible_loop.index0].stat.exists
       ignore_errors: yes
       environment:
         HOME: "{{ current_home }}"
