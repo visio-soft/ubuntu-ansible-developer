@@ -59,16 +59,36 @@
       tags: [system]
 
     # ==================================================================
-    # SECTION 2: PHP (for native Laravel)
+    # SECTION 2: ADD REPOSITORIES (Ubuntu 24.04 Compatible)
     # ==================================================================
     - name: Add PHP PPA
       apt_repository: { repo: "ppa:ondrej/php", state: present }
-      tags: [php]
+      tags: [php, nginx, database, redis]
 
-    - name: Install PHP and Extensions
+    - name: Add PostgreSQL Repository
+      shell: |
+        install -d /usr/share/postgresql-common/pgdg
+        curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
+        echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list
+      args: { creates: /etc/apt/sources.list.d/pgdg.list }
+      tags: [database]
+
+    # ==================================================================
+    # SECTION 3: INSTALL CORE SERVICES (Optimized Single Installation)
+    # ==================================================================
+    - name: Install PHP, Nginx, PostgreSQL, Redis (All Core Services)
       apt:
         update_cache: yes
+        state: latest
         name:
+          # Nginx
+          - nginx
+          # Redis
+          - redis-server
+          # PostgreSQL
+          - postgresql
+          - postgresql-client
+          # PHP and Extensions
           - "php{{ php_ver }}"
           - "php{{ php_ver }}-fpm"
           - "php{{ php_ver }}-cli"
@@ -84,8 +104,7 @@
           - "php{{ php_ver }}-sqlite3"
           - "php{{ php_ver }}-imagick"
           - "php{{ php_ver }}-soap"
-        state: latest
-      tags: [php]
+      tags: [php, nginx, database, redis]
 
     - name: Install Global Composer
       shell: curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
@@ -99,16 +118,6 @@
         state: started
       tags: [php]
 
-    # ==================================================================
-    # SECTION 3: NGINX
-    # ==================================================================
-    - name: Install Nginx
-      apt:
-        update_cache: yes
-        name: nginx
-        state: latest
-      tags: [nginx]
-
     - name: Enable and Start Nginx
       systemd:
         name: nginx
@@ -116,42 +125,12 @@
         state: started
       tags: [nginx]
 
-    # ==================================================================
-    # SECTION 4: POSTGRESQL
-    # ==================================================================
-    - name: Add PostgreSQL Repository
-      shell: |
-        install -d /usr/share/postgresql-common/pgdg
-        curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
-        echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list
-      args: { creates: /etc/apt/sources.list.d/pgdg.list }
-      tags: [database]
-
-    - name: Install PostgreSQL
-      apt:
-        update_cache: yes
-        name:
-          - postgresql
-          - postgresql-client
-        state: latest
-      tags: [database]
-
     - name: Enable and Start PostgreSQL
       systemd:
         name: postgresql
         enabled: yes
         state: started
       tags: [database]
-
-    # ==================================================================
-    # SECTION 5: REDIS
-    # ==================================================================
-    - name: Install Redis
-      apt:
-        update_cache: yes
-        name: redis-server
-        state: latest
-      tags: [redis]
 
     - name: Enable and Start Redis
       systemd:
@@ -161,7 +140,7 @@
       tags: [redis]
 
     # ==================================================================
-    # SECTION 6: NODE.JS
+    # SECTION 4: NODE.JS
     # ==================================================================
     - name: Add Node.js Repository
       shell: |
@@ -177,16 +156,16 @@
       tags: [nodejs]
 
     # ==================================================================
-    # SECTION 7: DEVELOPMENT TOOLS
+    # SECTION 5: DEVELOPMENT TOOLS
     # ==================================================================
-    - name: Add DBeaver Repository
+    - name: Add DBeaver Repository (Ubuntu 24.04 GPG Fix)
       shell: |
         curl -fsSL https://dbeaver.io/debs/dbeaver.gpg.key | gpg --dearmor --yes -o /etc/apt/trusted.gpg.d/dbeaver.gpg
         echo "deb https://dbeaver.io/debs/dbeaver-ce /" | tee /etc/apt/sources.list.d/dbeaver.list
       args: { creates: /etc/apt/sources.list.d/dbeaver.list }
       tags: [devtools]
 
-    - name: Add VS Code Repository
+    - name: Add VS Code Repository (Ubuntu 24.04 GPG Fix)
       shell: |
         curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor --yes -o /etc/apt/trusted.gpg.d/microsoft.gpg
         echo "deb [arch=amd64] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list
@@ -203,7 +182,7 @@
       tags: [devtools]
 
     # ==================================================================
-    # SECTION 8: GOOGLE ANTIGRAVITY EDITOR (Optional)
+    # SECTION 6: GOOGLE ANTIGRAVITY EDITOR (Optional)
     # ==================================================================
     - name: Create APT Keyrings Directory for Antigravity
       file:
