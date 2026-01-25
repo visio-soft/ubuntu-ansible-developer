@@ -1,0 +1,18 @@
+# Temporary files
+*.retry
+*.log
+.DS_Store
+
+# Ansible
+*.retry
+.ansible/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
