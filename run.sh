@@ -18,21 +18,27 @@ NC='\033[0m'
 # Installation options (all enabled by default)
 declare -A COMPONENTS=(
     ["system"]=1
-    ["docker"]=1
+    ["php"]=1
+    ["nginx"]=1
+    ["database"]=1
+    ["redis"]=1
     ["nodejs"]=1
     ["devtools"]=1
     ["antigravity"]=1
     ["projects"]=1
 )
 
-COMPONENT_KEYS=("system" "docker" "nodejs" "devtools" "antigravity" "projects")
+COMPONENT_KEYS=("system" "php" "nginx" "database" "redis" "nodejs" "devtools" "antigravity" "projects")
 COMPONENT_LABELS=(
     "System Packages (git, curl, acl, supervisor)"
-    "Docker + Docker Compose (for Laravel Sail)"
+    "PHP 8.4 + PHP-FPM + Composer"
+    "Nginx Web Server"
+    "PostgreSQL Database"
+    "Redis Server"
     "Node.js 20 + NPM"
     "VS Code + DBeaver"
     "Google Antigravity Editor"
-    "Project Setup (Sail, containers, migrate)"
+    "Project Setup (Native Laravel, Nginx, Horizon)"
 )
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -146,10 +152,12 @@ run_installation() {
     print_header "Installation Complete! 🎉"
     echo -e "Installation user: ${GREEN}$TARGET_USER${NC}"
     echo -e "Next steps:"
-    echo -e "  1. Log out and back in to apply Docker group: ${YELLOW}newgrp docker${NC}"
-    echo -e "  2. Navigate to project: ${YELLOW}cd /var/www/projects/zone${NC}"
-    echo -e "  3. Start Sail containers: ${YELLOW}./vendor/bin/sail up -d${NC}"
-    echo -e "  4. Check containers: ${YELLOW}docker ps${NC}"
+    echo -e "  1. Navigate to project: ${YELLOW}cd /var/www/projects/zone${NC}"
+    echo -e "  2. Access applications:"
+    echo -e "     - zone: ${YELLOW}http://zone.test${NC}"
+    echo -e "     - gate: ${YELLOW}http://gate.test${NC}"
+    echo -e "  3. Check services: ${YELLOW}sudo systemctl status nginx postgresql redis-server${NC}"
+    echo -e "  4. Check Horizon: ${YELLOW}supervisorctl status${NC}"
 }
 
 # Check for --all flag (skip menu)

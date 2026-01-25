@@ -1,5 +1,5 @@
 ---
-- name: Laravel Sail Project Setup
+- name: Laravel Native Project Setup
   hosts: localhost
   connection: local
   become: yes
@@ -12,20 +12,29 @@
     current_user: "{{ target_user | default(lookup('env', 'SUDO_USER') | default(ansible_user_id, true)) }}"
     current_home: "{{ '/root' if current_user == 'root' else '/home/' + current_user }}"
     
+    # PHP and service paths
+    php_ver: "8.4"
+    php_bin: "/usr/bin/php"
+    php_fpm_sock: "/run/php/php8.4-fpm.sock"
+    composer_bin: "/usr/local/bin/composer"
+    
+    # Database password
+    db_pass: "secret"
+    
     ansible_remote_tmp: /tmp
 
     projects:
-      - { name: "zone", repo: "git@github.com:visio-soft/zone.git" }
-      - { name: "gate", repo: "git@github.com:visio-soft/gate.git" }
+      - { name: "zone", repo: "git@github.com:visio-soft/zone.git", db: "zone_db", user: "zone_user" }
+      - { name: "gate", repo: "git@github.com:visio-soft/gate.git", db: "gate_db", user: "gate_user" }
 
   tasks:
     # ==================================================================
     # USER SETUP
     # ==================================================================
-    - name: Add current user to www-data and docker groups
+    - name: Add current user to www-data group
       user:
         name: "{{ current_user }}"
-        groups: "{{ shared_group }},docker"
+        groups: "{{ shared_group }}"
         append: yes
 
     # ==================================================================
@@ -60,9 +69,22 @@
         prompt: "❗ Press ENTER after adding the Key to GitHub..."
 
     # ==================================================================
-    # DATABASE SETUP (Not needed - using Sail containers)
+    # DATABASE SETUP
     # ==================================================================
-    # Laravel Sail will manage databases via Docker containers
+    - name: Create PostgreSQL Users and Databases
+      become_user: postgres
+      block:
+        - name: Create PostgreSQL Users
+          postgresql_user:
+            name: "{{ item.user }}"
+            password: "{{ db_pass }}"
+          loop: "{{ projects }}"
+        
+        - name: Create PostgreSQL Databases
+          postgresql_db:
+            name: "{{ item.db }}"
+            owner: "{{ item.user }}"
+          loop: "{{ projects }}"
 
     # ==================================================================
     # SHARED DIRECTORY SETUP
@@ -86,42 +108,40 @@
         force: yes
       loop: "{{ projects }}"
 
-    - name: Configure Projects for Laravel Sail
+    - name: Configure Projects for Native Laravel
       become_user: "{{ current_user }}"
       become_flags: '-i'
       shell: |
         # Copy .env.example to .env if not exists
         cp -n .env.example .env || true
         
-        # Install composer dependencies first
-        composer install --no-interaction --prefer-dist
+        # Install composer dependencies
+        php -d memory_limit=-1 {{ composer_bin }} install --no-interaction --prefer-dist
         
-        # Install Laravel Sail if not present in composer.json
-        if ! grep -q "laravel/sail" composer.json; then
-          composer require laravel/sail --dev
-        fi
-        
-        # Install Sail configuration (pgsql, redis)
-        if [ ! -f docker-compose.yml ]; then
-          php artisan sail:install --with=pgsql,redis
-        fi
-        
-        # Update .env for Sail
-        sed -i "s/^DB_HOST=.*/DB_HOST=pgsql/" .env
-        sed -i "s/^DB_DATABASE=.*/DB_DATABASE={{ item.name }}_db/" .env
-        sed -i "s/^DB_USERNAME=.*/DB_USERNAME=sail/" .env
-        sed -i "s/^DB_PASSWORD=.*/DB_PASSWORD=password/" .env
-        sed -i "s|^APP_URL=.*|APP_URL=http://localhost|" .env
-        sed -i "s/^REDIS_HOST=.*/REDIS_HOST=redis/" .env
+        # Update .env for native setup
+        sed -i "s/^DB_CONNECTION=.*/DB_CONNECTION=pgsql/" .env
+        sed -i "s/^DB_HOST=.*/DB_HOST=127.0.0.1/" .env
+        sed -i "s/^DB_PORT=.*/DB_PORT=5432/" .env
+        sed -i "s/^DB_DATABASE=.*/DB_DATABASE={{ item.db }}/" .env
+        sed -i "s/^DB_USERNAME=.*/DB_USERNAME={{ item.user }}/" .env
+        sed -i "s/^DB_PASSWORD=.*/DB_PASSWORD={{ db_pass }}/" .env
+        sed -i "s|^APP_URL=.*|APP_URL=http://{{ item.name }}.test|" .env
+        sed -i "s/^REDIS_HOST=.*/REDIS_HOST=127.0.0.1/" .env
+        sed -i "s/^REDIS_PORT=.*/REDIS_PORT=6379/" .env
         sed -i "s/^QUEUE_CONNECTION=.*/QUEUE_CONNECTION=redis/" .env
-        
-        # Add APP_PORT to .env if not exists
-        if ! grep -q "^APP_PORT=" .env; then
-          echo "APP_PORT={{ 8000 + ansible_loop.index0 }}" >> .env
-        fi
         
         # Generate application key
         php artisan key:generate || true
+        
+        # Run migrations
+        php artisan migrate --force || true
+        
+        # Create storage link
+        php artisan storage:link || true
+        
+        # Install and build frontend assets
+        npm install || true
+        npm run build || true
       args:
         chdir: "{{ projects_dir }}/{{ item.name }}"
       loop: "{{ projects }}"
@@ -129,7 +149,7 @@
         extended: yes
 
     # ==================================================================
-    # SHARED PERMISSIONS (any www-data user can edit)
+    # SHARED PERMISSIONS
     # ==================================================================
     - name: Set Project Directory Permissions
       file:
@@ -140,11 +160,12 @@
         mode: 'g+rwX'  # group read/write/execute
       loop: "{{ projects }}"
 
-    - name: Set Storage Permissions (writable by all)
+    - name: Set Storage Permissions
       file:
         path: "{{ projects_dir }}/{{ item.name }}/storage"
         state: directory
         recurse: yes
+        owner: "{{ current_user }}"
         group: "{{ shared_group }}"
         mode: '2775'  # setgid + rwx for group
       loop: "{{ projects }}"
@@ -154,88 +175,140 @@
         path: "{{ projects_dir }}/{{ item.name }}/bootstrap/cache"
         state: directory
         recurse: yes
+        owner: "{{ current_user }}"
         group: "{{ shared_group }}"
         mode: '2775'
       loop: "{{ projects }}"
       ignore_errors: yes
 
     # ==================================================================
-    # START SAIL CONTAINERS
+    # NGINX CONFIGURATION
     # ==================================================================
-    - name: Start Laravel Sail Containers
-      become_user: "{{ current_user }}"
-      become_flags: '-i'
-      shell: |
-        ./vendor/bin/sail up -d
-      args:
-        chdir: "{{ projects_dir }}/{{ item.name }}"
-      loop: "{{ projects }}"
-      environment:
-        HOME: "{{ current_home }}"
+    - name: Create Nginx Server Blocks for Projects
+      copy:
+        dest: "/etc/nginx/sites-available/{{ item.name }}.test"
+        content: |
+          server {
+              listen 80;
+              listen [::]:80;
+              server_name {{ item.name }}.test;
+              root {{ projects_dir }}/{{ item.name }}/public;
 
-    - name: Wait for containers to be ready
-      pause:
-        seconds: 20
-    
-    - name: Check if containers are healthy
-      become_user: "{{ current_user }}"
-      shell: |
-        for i in {1..30}; do
-          if docker ps | grep -q "{{ item.name }}.*Up"; then
-            echo "Container is up"
-            exit 0
-          fi
-          sleep 2
-        done
-        echo "Container did not start in time"
-        exit 1
-      args:
-        chdir: "{{ projects_dir }}/{{ item.name }}"
-      loop: "{{ projects }}"
-      register: container_health
-      failed_when: false
+              add_header X-Frame-Options "SAMEORIGIN";
+              add_header X-Content-Type-Options "nosniff";
 
-    - name: Run migrations and setup in Sail
-      become_user: "{{ current_user }}"
-      become_flags: '-i'
-      shell: |
-        ./vendor/bin/sail artisan migrate --force
-        ./vendor/bin/sail artisan storage:link
-        ./vendor/bin/sail npm install
-        ./vendor/bin/sail npm run build
-      args:
-        chdir: "{{ projects_dir }}/{{ item.name }}"
+              index index.php;
+
+              charset utf-8;
+
+              location / {
+                  try_files $uri $uri/ /index.php?$query_string;
+              }
+
+              location = /favicon.ico { access_log off; log_not_found off; }
+              location = /robots.txt  { access_log off; log_not_found off; }
+
+              error_page 404 /index.php;
+
+              location ~ \.php$ {
+                  fastcgi_pass unix:{{ php_fpm_sock }};
+                  fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+                  fastcgi_split_path_info ^(.+\.php)(/.+)$;
+                  fastcgi_index index.php;
+                  include fastcgi_params;
+                  fastcgi_param PATH_INFO $fastcgi_path_info;
+              }
+
+              location ~ /\.(?!well-known).* {
+                  deny all;
+              }
+          }
       loop: "{{ projects }}"
-      ignore_errors: yes
-      environment:
-        HOME: "{{ current_home }}"
+
+    - name: Enable Nginx Server Blocks
+      file:
+        src: "/etc/nginx/sites-available/{{ item.name }}.test"
+        dest: "/etc/nginx/sites-enabled/{{ item.name }}.test"
+        state: link
+      loop: "{{ projects }}"
+
+    - name: Add Projects to /etc/hosts
+      lineinfile:
+        path: /etc/hosts
+        regexp: "^127\\.0\\.0\\.1\\s+{{ item.name }}\\.test"
+        line: "127.0.0.1 {{ item.name }}.test"
+        state: present
+      loop: "{{ projects }}"
+
+    - name: Test Nginx Configuration
+      command: nginx -t
+      register: nginx_test
+      changed_when: false
+      failed_when: nginx_test.rc != 0
+
+    - name: Reload Nginx
+      systemd:
+        name: nginx
+        state: reloaded
+      when: nginx_test.rc == 0
+
+    # ==================================================================
+    # SUPERVISOR (Laravel Horizon/Queue Workers)
+    # ==================================================================
+    - name: Create Supervisor Configs for Laravel Horizon
+      copy:
+        dest: "/etc/supervisor/conf.d/{{ item.name }}-horizon.conf"
+        content: |
+          [program:{{ item.name }}-horizon]
+          process_name=%(program_name)s
+          command={{ php_bin }} {{ projects_dir }}/{{ item.name }}/artisan horizon
+          autostart=true
+          autorestart=true
+          user={{ current_user }}
+          redirect_stderr=true
+          stdout_logfile={{ projects_dir }}/{{ item.name }}/storage/logs/horizon.log
+          stopwaitsecs=3600
+      loop: "{{ projects }}"
+      register: supervisor_config
+
+    - name: Reload Supervisor Configuration
+      block:
+        - command: supervisorctl reread
+          when: supervisor_config.changed
+        
+        - command: supervisorctl update
+          when: supervisor_config.changed
+
+        - command: "supervisorctl restart {{ item.name }}-horizon"
+          loop: "{{ projects }}"
+          ignore_errors: yes
 
     # ==================================================================
     # FINAL STATUS
     # ==================================================================
-    - name: Get Running Containers
-      become_user: "{{ current_user }}"
-      shell: docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-      register: container_status
+    - name: Get Supervisor Status
+      command: supervisorctl status
+      register: supervisor_status
       changed_when: false
 
     - name: 🏁 PROJECT SETUP COMPLETE 🏁
       debug:
         msg: 
-          - "All projects configured with Laravel Sail!"
+          - "All projects configured with native services!"
           - "Projects directory: {{ projects_dir }}"
           - ""
-          - "Running Docker Containers:"
-          - "{{ container_status.stdout }}"
+          - "Supervisor (Horizon) Status:"
+          - "{{ supervisor_status.stdout }}"
           - ""
           - "Access your applications:"
-          - "  - zone: http://localhost:8000"
-          - "  - gate: http://localhost:8001"
+          - "  - zone: http://zone.test"
+          - "  - gate: http://gate.test"
           - ""
-          - "Useful Sail commands:"
-          - "  ./vendor/bin/sail up -d    # Start containers"
-          - "  ./vendor/bin/sail down     # Stop containers"
-          - "  ./vendor/bin/sail artisan  # Run artisan commands"
-          - "  ./vendor/bin/sail composer # Run composer"
-          - "  ./vendor/bin/sail npm      # Run npm"
-          - "  ./vendor/bin/sail shell    # Access container shell"
+          - "Useful commands:"
+          - "  cd {{ projects_dir }}/project-name"
+          - "  php artisan migrate       # Run migrations"
+          - "  php artisan tinker        # Interactive shell"
+          - "  composer install          # Install dependencies"
+          - "  npm run dev               # Build assets"
+          - "  supervisorctl status      # Check Horizon status"
+          - "  sudo systemctl status nginx postgresql redis-server"

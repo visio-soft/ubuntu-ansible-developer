@@ -59,84 +59,109 @@
       tags: [system]
 
     # ==================================================================
-    # SECTION 2: PHP CLI (for Composer and initial Sail setup)
+    # SECTION 2: PHP (for native Laravel)
     # ==================================================================
     - name: Add PHP PPA
       apt_repository: { repo: "ppa:ondrej/php", state: present }
-      tags: [docker]
+      tags: [php]
 
-    - name: Install PHP CLI and Composer
+    - name: Install PHP and Extensions
       apt:
         update_cache: yes
         name:
+          - "php{{ php_ver }}"
+          - "php{{ php_ver }}-fpm"
           - "php{{ php_ver }}-cli"
           - "php{{ php_ver }}-curl"
           - "php{{ php_ver }}-mbstring"
           - "php{{ php_ver }}-xml"
           - "php{{ php_ver }}-zip"
+          - "php{{ php_ver }}-pgsql"
+          - "php{{ php_ver }}-bcmath"
+          - "php{{ php_ver }}-intl"
+          - "php{{ php_ver }}-gd"
+          - "php{{ php_ver }}-redis"
+          - "php{{ php_ver }}-sqlite3"
+          - "php{{ php_ver }}-imagick"
+          - "php{{ php_ver }}-soap"
         state: latest
-      tags: [docker]
+      tags: [php]
 
     - name: Install Global Composer
       shell: curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
       args: { creates: /usr/local/bin/composer }
-      tags: [docker]
+      tags: [php]
 
-    # ==================================================================
-    # SECTION 3: DOCKER
-    # ==================================================================
-    - name: Install Docker Prerequisites
-      apt:
-        update_cache: yes
-        name:
-          - ca-certificates
-          - gnupg
-          - lsb-release
-        state: present
-      tags: [docker]
-
-    - name: Add Docker GPG Key
-      shell: |
-        install -m 0755 -d /etc/apt/keyrings
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor --yes -o /etc/apt/keyrings/docker.gpg
-        chmod a+r /etc/apt/keyrings/docker.gpg
-      args: { creates: /etc/apt/keyrings/docker.gpg }
-      tags: [docker]
-
-    - name: Add Docker Repository
-      shell: |
-        echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-      args: { creates: /etc/apt/sources.list.d/docker.list }
-      tags: [docker]
-
-    - name: Install Docker
-      apt:
-        update_cache: yes
-        name:
-          - docker-ce
-          - docker-ce-cli
-          - containerd.io
-          - docker-buildx-plugin
-          - docker-compose-plugin
-        state: latest
-      tags: [docker]
-
-    - name: Add User to Docker Group
-      user:
-        name: "{{ target_user }}"
-        groups: docker
-        append: yes
-      tags: [docker]
-
-    - name: Enable and Start Docker
+    - name: Enable and Start PHP-FPM
       systemd:
-        name: docker
+        name: "php{{ php_ver }}-fpm"
         enabled: yes
         state: started
-      tags: [docker]
+      tags: [php]
 
     # ==================================================================
-    # SECTION 4: NODE.JS
+    # SECTION 3: NGINX
+    # ==================================================================
+    - name: Install Nginx
+      apt:
+        update_cache: yes
+        name: nginx
+        state: latest
+      tags: [nginx]
+
+    - name: Enable and Start Nginx
+      systemd:
+        name: nginx
+        enabled: yes
+        state: started
+      tags: [nginx]
+
+    # ==================================================================
+    # SECTION 4: POSTGRESQL
+    # ==================================================================
+    - name: Add PostgreSQL Repository
+      shell: |
+        install -d /usr/share/postgresql-common/pgdg
+        curl -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc --fail https://www.postgresql.org/media/keys/ACCC4CF8.asc
+        echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list
+      args: { creates: /etc/apt/sources.list.d/pgdg.list }
+      tags: [database]
+
+    - name: Install PostgreSQL
+      apt:
+        update_cache: yes
+        name:
+          - postgresql
+          - postgresql-client
+        state: latest
+      tags: [database]
+
+    - name: Enable and Start PostgreSQL
+      systemd:
+        name: postgresql
+        enabled: yes
+        state: started
+      tags: [database]
+
+    # ==================================================================
+    # SECTION 5: REDIS
+    # ==================================================================
+    - name: Install Redis
+      apt:
+        update_cache: yes
+        name: redis-server
+        state: latest
+      tags: [redis]
+
+    - name: Enable and Start Redis
+      systemd:
+        name: redis-server
+        enabled: yes
+        state: started
+      tags: [redis]
+
+    # ==================================================================
+    # SECTION 6: NODE.JS
     # ==================================================================
     - name: Add Node.js Repository
       shell: |
@@ -150,16 +175,6 @@
         name: nodejs
         state: latest
       tags: [nodejs]
-
-    # ==================================================================
-    # SECTION 5: DATABASES (Not needed - using Docker with Sail)
-    # ==================================================================
-    # PostgreSQL and Redis will be run via Laravel Sail Docker containers
-
-    # ==================================================================
-    # SECTION 6: NGINX (Not needed - using Docker with Sail)
-    # ==================================================================
-    # Nginx will be run via Laravel Sail Docker containers
 
     # ==================================================================
     # SECTION 7: DEVELOPMENT TOOLS
@@ -188,7 +203,7 @@
       tags: [devtools]
 
     # ==================================================================
-    # SECTION 8: GOOGLE ANTIGRAVITY EDITOR
+    # SECTION 8: GOOGLE ANTIGRAVITY EDITOR (Optional)
     # ==================================================================
     - name: Create APT Keyrings Directory for Antigravity
       file:

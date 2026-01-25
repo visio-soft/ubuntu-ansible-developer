@@ -1,50 +1,65 @@
-# Migration Guide: Native Setup to Laravel Sail
+# Migration Guide: Laravel Sail to Native Setup
 
-This guide helps you migrate from the old native PHP/Nginx setup to the new Docker-based Laravel Sail environment.
+This guide helps you migrate from the old Docker-based Laravel Sail environment to the new native PHP/Nginx setup.
 
 ## What Changed?
 
-### Before (Native Setup)
+### Before (Laravel Sail with Docker)
+- Docker containers for all services
+- PHP CLI on host (for initial setup only)
+- All services run in isolated containers
+- Projects accessible at `http://localhost:PORT`
+
+### After (Native Setup)
 - Native PHP 8.4 + PHP-FPM installation
 - Native Nginx web server
 - Native PostgreSQL database
 - Native Redis server
 - Projects accessible at `http://project.test`
 
-### After (Laravel Sail)
-- Docker containers for all services
-- PHP CLI on host (for initial setup only)
-- All services run in isolated containers
-- Projects accessible at `http://localhost:PORT`
-
 ## Migration Steps
 
 ### 1. Backup Your Existing Setup
 
-If you have an existing installation, backup your data:
+If you have an existing Sail installation, backup your data:
 
 ```bash
-# Backup databases
-sudo -u postgres pg_dumpall > ~/backup_databases.sql
+# Backup databases from Sail containers
+cd /var/www/projects/zone
+./vendor/bin/sail exec pgsql pg_dumpall -U sail > ~/backup_databases.sql
 
 # Backup project files (if needed)
 cp -r /var/www/projects ~/projects_backup
 ```
 
-### 2. Clean Up Old Installation (Optional)
-
-If you want to remove the old native services:
+### 2. Stop and Remove Sail Containers
 
 ```bash
-# Stop and disable services
-sudo systemctl stop nginx php8.4-fpm postgresql redis-server supervisor
-sudo systemctl disable nginx php8.4-fpm postgresql redis-server
+# Stop all Sail containers
+cd /var/www/projects/zone
+./vendor/bin/sail down
 
-# Remove packages (optional - be careful!)
-# sudo apt remove nginx php8.4-fpm postgresql redis-server
+cd /var/www/projects/gate
+./vendor/bin/sail down
+
+# Remove all Docker containers and images (optional)
+docker system prune -a
 ```
 
-### 3. Run the New Installation
+### 3. Remove Sail Dependencies (Optional)
+
+```bash
+# Remove laravel/sail from projects
+cd /var/www/projects/zone
+composer remove laravel/sail --dev
+rm -f docker-compose.yml
+
+cd /var/www/projects/gate
+composer remove laravel/sail --dev
+rm -f docker-compose.yml
+```
+
+### 4. Run the New Native Installation
 
 ```bash
 cd ubuntu-ansible-developer
@@ -52,31 +67,20 @@ git pull origin main
 ./run.sh --all
 ```
 
-### 4. Restore Database Data (if needed)
+### 5. Restore Database Data (if needed)
 
-After Sail containers are running:
+After native PostgreSQL is installed:
 
 ```bash
-cd /var/www/projects/your-project
-
-# Copy backup into container
-docker cp ~/backup_databases.sql $(docker ps -qf "name=pgsql"):/tmp/
-
-# Restore in container
-./vendor/bin/sail exec pgsql psql -U sail -d postgres -f /tmp/backup_databases.sql
+# Restore databases
+psql -U postgres -h 127.0.0.1 -f ~/backup_databases.sql
 ```
 
 ## Key Differences
 
-### Starting/Stopping Projects
+### Starting/Stopping Services
 
-**Before:**
-```bash
-sudo systemctl restart nginx
-sudo supervisorctl restart project-horizon
-```
-
-**After:**
+**Before (Sail):**
 ```bash
 cd /var/www/projects/project-name
 ./vendor/bin/sail up -d      # Start
@@ -84,17 +88,18 @@ cd /var/www/projects/project-name
 ./vendor/bin/sail restart     # Restart
 ```
 
-### Running Commands
-
-**Before:**
+**After (Native):**
 ```bash
-cd /var/www/projects/project-name
-php artisan migrate
-composer install
-npm run build
+# Services are always running
+sudo systemctl status nginx postgresql redis-server php8.4-fpm
+
+# Restart if needed
+sudo systemctl restart nginx
 ```
 
-**After:**
+### Running Commands
+
+**Before (Sail):**
 ```bash
 cd /var/www/projects/project-name
 ./vendor/bin/sail artisan migrate
@@ -102,29 +107,29 @@ cd /var/www/projects/project-name
 ./vendor/bin/sail npm run build
 ```
 
+**After (Native):**
+```bash
+cd /var/www/projects/project-name
+php artisan migrate
+composer install
+npm run build
+```
+
 ### Accessing Services
 
-**Before:**
-- Web: `http://project.test`
-- Database: `localhost:5432` (host)
-- Redis: `localhost:6379` (host)
-
-**After:**
+**Before (Sail):**
 - Web: `http://localhost:8000` (zone), `http://localhost:8001` (gate)
 - Database: `localhost:54XX` (forwarded from container)
 - Redis: `localhost:63XX` (forwarded from container)
 
+**After (Native):**
+- Web: `http://zone.test`, `http://gate.test`
+- Database: `localhost:5432` (native PostgreSQL)
+- Redis: `localhost:6379` (native Redis)
+
 ### Database Connections
 
-**Before (.env):**
-```env
-DB_HOST=127.0.0.1
-DB_DATABASE=project_db
-DB_USERNAME=project_user
-DB_PASSWORD=secret
-```
-
-**After (.env):**
+**Before (.env - Sail):**
 ```env
 DB_HOST=pgsql
 DB_DATABASE=project_db
@@ -132,51 +137,78 @@ DB_USERNAME=sail
 DB_PASSWORD=password
 ```
 
+**After (.env - Native):**
+```env
+DB_HOST=127.0.0.1
+DB_DATABASE=project_db
+DB_USERNAME=project_user
+DB_PASSWORD=secret
+```
+
 ## Troubleshooting
 
 ### Port Conflicts
 
-If ports 8000-8001 are in use:
+If port 80 is already in use:
 
 ```bash
-# Edit .env and change APP_PORT
-APP_PORT=9000
+# Check what's using port 80
+sudo lsof -i :80
 
-# Restart Sail
-./vendor/bin/sail down
-./vendor/bin/sail up -d
+# Stop conflicting service
+sudo systemctl stop apache2  # If Apache is running
 ```
 
-### Docker Group Permission
+### Permission Issues
 
-If you get "permission denied" errors:
+If you get permission errors:
 
 ```bash
-# Apply docker group (logout/login or use newgrp)
-newgrp docker
-
-# Or logout and login again
+# Fix storage permissions
+cd /var/www/projects/project-name
+sudo chown -R $USER:www-data storage bootstrap/cache
+sudo chmod -R 775 storage bootstrap/cache
 ```
 
-### Container Won't Start
+### Nginx Configuration Errors
 
-Check logs:
+Test and view Nginx configuration:
 
 ```bash
-./vendor/bin/sail logs
-docker logs container-name
+# Test configuration
+sudo nginx -t
+
+# View configuration
+cat /etc/nginx/sites-available/zone.test
+
+# Reload Nginx
+sudo systemctl reload nginx
 ```
 
-## Benefits of Sail
+### PostgreSQL Connection Issues
 
-1. **Isolation**: Each project runs in its own containers
-2. **Consistency**: Same environment on all machines
-3. **Flexibility**: Easy to switch PHP/database versions
-4. **No Conflicts**: Multiple projects can run simultaneously
-5. **Easy Cleanup**: Just remove containers, no system-wide changes
+```bash
+# Check PostgreSQL status
+sudo systemctl status postgresql
+
+# Check if database exists
+sudo -u postgres psql -c "\l"
+
+# Create database manually if needed
+sudo -u postgres createdb -O project_user project_db
+```
+
+## Benefits of Native Setup
+
+1. **Performance**: No Docker overhead, direct access to system resources
+2. **Simplicity**: Standard Linux tools and commands
+3. **Debugging**: Easier to debug with native tools
+4. **Resource Usage**: Lower memory and CPU usage
+5. **Integration**: Better integration with system services
 
 ## Getting Help
 
-- Laravel Sail Documentation: https://laravel.com/docs/12.x/sail
-- Docker Documentation: https://docs.docker.com/
+- Laravel Documentation: https://laravel.com/docs
+- Nginx Documentation: https://nginx.org/en/docs/
+- PostgreSQL Documentation: https://www.postgresql.org/docs/
 - Project Repository: https://github.com/visio-soft/ubuntu-ansible-developer
