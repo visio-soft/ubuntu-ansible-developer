@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manager</title>
+    <title>bOOT</title>
     <link rel="stylesheet" href="{{ asset('css/manager.css') }}">
 </head>
 <body>
     <aside>
-        <div class="brand">Manager</div>
+        <div class="brand">🚀 bOOT</div>
         <nav>
             <a href="{{ route('sites.index') }}" class="{{ request()->routeIs('sites.*') ? 'active' : '' }}">
                 Projects

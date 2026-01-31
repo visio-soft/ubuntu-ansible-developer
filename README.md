@@ -1,4 +1,4 @@
-# Ubuntu PHP Developer Environment
+# bOOT - PHP Developer Environment
 
 A professional, local PHP development stack for Ubuntu, inspired by Laravel Herd. This project provides an automated Ansible system provisioner and a sleek Laravel dashboard to manage your development workflows.
 
