@@ -247,11 +247,11 @@ class SiteController extends Controller
         $path = "/var/www/projects/{$site}/.env";
         $content = $request->input('content');
 
-        // Write via sudo tee
+        // Write via tee (doesn't require password unlike cp)
         $tmp = tempnam(sys_get_temp_dir(), 'env');
         file_put_contents($tmp, $content);
         
-        $cmd = "sudo cp " . escapeshellarg($tmp) . " " . escapeshellarg($path);
+        $cmd = "cat " . escapeshellarg($tmp) . " | sudo tee " . escapeshellarg($path) . " > /dev/null";
         $res = Process::run($cmd);
         
         unlink($tmp);
