@@ -48,13 +48,17 @@ class CreateProject implements ShouldQueue
                 
                 // Install Dependencies
                 Log::info("Installing Composer Dependencies...");
-                Process::path($projectPath)->run([$php, '-d', 'memory_limit=-1', $composer, 'install'], function ($type, $output) {
-                    Log::info($output);
-                });
+                Process::path($projectPath)
+                    ->env(['HOME' => '/home/alp', 'COMPOSER_HOME' => '/home/alp/.composer'])
+                    ->run([$php, '-d', 'memory_limit=-1', $composer, 'install'], function ($type, $output) {
+                        Log::info($output);
+                    });
             } else {
                 // Create New
                 Log::info("Running create-project laravel/laravel...");
-                $res = Process::path($projectsDir)->run([$composer, 'create-project', 'laravel/laravel', $name]);
+                $res = Process::path($projectsDir)
+                    ->env(['HOME' => '/home/alp', 'COMPOSER_HOME' => '/home/alp/.composer'])
+                    ->run([$composer, 'create-project', 'laravel/laravel', $name]);
                 if ($res->failed()) throw new \Exception("Composer Create Failed: " . $res->errorOutput());
             }
 
@@ -138,7 +142,9 @@ EOF;
             // 6. Horizon
             if ($this->installHorizon) {
                 Log::info("Installing Horizon...");
-                Process::path($projectPath)->run([$php, $composer, 'require', 'laravel/horizon']);
+                Process::path($projectPath)
+                    ->env(['HOME' => '/home/alp', 'COMPOSER_HOME' => '/home/alp/.composer'])
+                    ->run([$php, $composer, 'require', 'laravel/horizon']);
                 Process::path($projectPath)->run(['php', 'artisan', 'horizon:install']);
                 
                 // Supervisor Config

@@ -12,7 +12,12 @@
 </header>
 
 <!-- Create New Project (Hidden by default) -->
-<div id="createForm" class="card mb-12 hidden">
+<div id="createForm" class="card mb-12 hidden" x-data="{ 
+    verified: false,
+    setVerified(val) {
+        this.verified = val;
+    }
+}">
     <h2 class="text-lg font-semibold mb-6">New Project</h2>
     <form action="{{ route('sites.store') }}" method="POST" class="space-y-5">
         @csrf
@@ -21,20 +26,24 @@
             <input type="text" name="repo" id="repo" placeholder="git@github.com:user/repo.git" class="input-field" autocomplete="off">
             <div id="gitMessage" class="mt-2 text-xs hidden"></div>
         </div>
-        <div>
-            <label class="block text-sm text-apple-grey mb-2">Project Name</label>
-            <input type="text" name="name" id="name" placeholder="my-project" class="input-field" required>
-        </div>
-        <div class="flex items-center gap-3">
-            <input type="checkbox" name="horizon" id="horizon" value="1" class="w-4 h-4 rounded">
-            <label for="horizon" class="text-sm">Install Laravel Horizon</label>
-        </div>
-        <div class="flex items-center gap-3">
-            <input type="checkbox" name="deployment" id="deployment" value="1" class="w-4 h-4 rounded" checked>
-            <label for="deployment" class="text-sm">Run Laravel Deployment (migrate, storage:link, npm install)</label>
-        </div>
-        <div class="flex justify-end">
-            <button type="submit" class="btn">Create Project</button>
+        
+        <!-- Show these fields only after verification -->
+        <div x-show="verified" x-transition class="space-y-5">
+            <div>
+                <label class="block text-sm text-apple-grey mb-2">Project Name</label>
+                <input type="text" name="name" id="name" placeholder="my-project" class="input-field" required>
+            </div>
+            <div class="flex items-center gap-3">
+                <input type="checkbox" name="horizon" id="horizon" value="1" class="w-4 h-4 rounded">
+                <label for="horizon" class="text-sm">Install Laravel Horizon</label>
+            </div>
+            <div class="flex items-center gap-3">
+                <input type="checkbox" name="deployment" id="deployment" value="1" class="w-4 h-4 rounded" checked>
+                <label for="deployment" class="text-sm">Run Laravel Deployment (migrate, storage:link, npm install)</label>
+            </div>
+            <div class="flex justify-end">
+                <button type="submit" class="btn">Create Project</button>
+            </div>
         </div>
     </form>
 </div>
@@ -225,6 +234,13 @@ repoInput.addEventListener('input', () => {
     clearTimeout(timeout);
     msg.textContent = '';
     msg.className = 'mt-2 text-xs hidden';
+    
+    // Reset verification state on change (Alpine v3)
+    const formElement = document.getElementById('createForm');
+    if (formElement && formElement._x_dataStack) {
+        formElement._x_dataStack[0].verified = false;
+    }
+    
     timeout = setTimeout(checkGit, 600);
 });
 
@@ -242,6 +258,13 @@ async function checkGit() {
         if (data.status === 'ok') {
             msg.textContent = '✓ Access verified';
             msg.className = 'mt-2 text-xs text-green-600 block';
+            
+            // Set Alpine.js verified state to true (Alpine v3)
+            const formElement = document.getElementById('createForm');
+            if (formElement && formElement._x_dataStack) {
+                formElement._x_dataStack[0].verified = true;
+            }
+            
             if (!document.getElementById('name').value) {
                 const name = repo.split('/').pop().replace('.git', '');
                 document.getElementById('name').value = name;
@@ -253,6 +276,12 @@ async function checkGit() {
     } catch (e) {
         msg.textContent = '✕ Check failed';
         msg.className = 'mt-2 text-xs text-red-500 block';
+        
+        // Reset verification state on error (Alpine v3)
+        const formElement = document.getElementById('createForm');
+        if (formElement && formElement._x_dataStack) {
+            formElement._x_dataStack[0].verified = false;
+        }
     }
 }
 </script>
