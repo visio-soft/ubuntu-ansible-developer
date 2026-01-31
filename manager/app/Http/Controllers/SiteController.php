@@ -69,6 +69,17 @@ class SiteController extends Controller
                     }
                 }
 
+                // Count ERROR/WARNING logs for Laravel projects
+                $logCount = 0;
+                if ($isLaravel) {
+                    $logFile = "$dir/storage/logs/laravel.log";
+                    if (File::exists($logFile)) {
+                        $cmd = "grep -cE '^\[.*\] \w+\.(ERROR|WARNING|CRITICAL):' " . escapeshellarg($logFile) . " 2>/dev/null || echo 0";
+                        $res = Process::run($cmd);
+                        $logCount = (int) trim($res->output());
+                    }
+                }
+
                 $sites[] = [
                     'name' => $name,
                     'url' => $url,
@@ -77,7 +88,8 @@ class SiteController extends Controller
                     'version' => $laravelVersion,
                     'horizon' => $horizonStatus,
                     'db_name' => $dbName,
-                    'env_exists' => $envExists
+                    'env_exists' => $envExists,
+                    'log_count' => $logCount
                 ];
             }
         }

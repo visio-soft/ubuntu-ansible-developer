@@ -27,14 +27,9 @@
         );
     }
 }">
-    <header class="mb-6 flex items-center justify-between">
-        <div>
-            <h1 class="text-2xl font-bold tracking-tight text-[#1d1d1f]">{{ $title }} Logs</h1>
-            <p class="text-xs text-apple-grey mt-1 font-mono">{{ $logPath }}</p>
-        </div>
-        <div class="w-64">
-            <input type="text" x-model="search" placeholder="Search logs..." class="input-field text-sm">
-        </div>
+    <header class="mb-6">
+        <h1 class="text-2xl font-bold tracking-tight text-[#1d1d1f]">{{ $title }} Logs</h1>
+        <p class="text-xs text-apple-grey mt-1 font-mono">{{ $logPath }}</p>
     </header>
 
     <div x-show="loading" class="flex-1 flex items-center justify-center text-gray-500">
@@ -84,9 +79,8 @@
 
                 <!-- Detail Panel (Bottom) -->
                 <div class="h-1/2 bg-gray-50 overflow-auto border-t border-gray-200 flex flex-col shrink-0" x-show="selected">
-                    <div class="px-4 py-2 bg-white border-b border-gray-200 flex justify-between items-center sticky top-0 shadow-sm">
+                    <div class="px-4 py-2 bg-white border-b border-gray-200 sticky top-0 shadow-sm">
                         <span class="font-semibold text-sm" x-text="selected ? selected.message : ''"></span>
-                        <button @click="selected = null" class="text-xs text-gray-500 hover:text-gray-800 border px-2 py-1 rounded">Close</button>
                     </div>
                     <div class="p-4 font-mono text-xs text-gray-700 whitespace-pre-wrap selection:bg-blue-100" x-text="selected ? selected.stack_trace : ''"></div>
                 </div>
