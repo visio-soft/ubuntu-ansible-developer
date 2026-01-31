@@ -178,4 +178,40 @@ class ServicesController extends Controller
 
         return back()->with('success', 'PHP.ini updated and PHP-FPM restarted.');
     }
+
+    public function clearLogs(Request $request)
+    {
+        $type = $request->input('type');
+        $logPath = '';
+
+        if ($type === 'project') {
+            $project = $request->input('project');
+            $logPath = "/var/www/projects/{$project}/storage/logs/laravel.log";
+        } elseif (isset($this->logs[$type])) {
+            $logPath = $this->logs[$type];
+        }
+
+        if ($logPath && File::exists($logPath)) {
+            try {
+                $prefix = (str_starts_with($logPath, '/var/log')) ? 'sudo ' : '';
+                $result = Process::run("{$prefix}truncate -s 0 " . escapeshellarg($logPath));
+                
+                if ($result->failed()) {
+                    return back()->with('error', 'Failed to clear logs: ' . $result->errorOutput());
+                }
+                
+                // Verify the file was actually cleared
+                clearstatcache(true, $logPath);
+                if (File::size($logPath) === 0) {
+                    return back()->with('success', 'Logs cleared successfully.');
+                } else {
+                    return back()->with('error', 'Log file still contains data after clear attempt.');
+                }
+            } catch (\Exception $e) {
+                return back()->with('error', 'Error clearing logs: ' . $e->getMessage());
+            }
+        }
+
+        return back()->with('error', 'Log file not found.');
+    }
 }

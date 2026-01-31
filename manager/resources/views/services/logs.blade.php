@@ -7,7 +7,9 @@
     logs: [],
     loading: true,
     init() {
-        fetch(window.location.href + '&json=1')
+        const url = new URL(window.location.href);
+        url.searchParams.set('json', '1');
+        fetch(url.toString())
             .then(res => res.json())
             .then(data => {
                 this.logs = data;

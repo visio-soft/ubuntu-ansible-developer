@@ -15,6 +15,8 @@ Route::get('/sites/env/{site}', [SiteController::class, 'editEnv'])->name('sites
 Route::post('/sites/env/{site}', [SiteController::class, 'saveEnv'])->name('sites.save-env');
 Route::delete('/sites/{site}', [SiteController::class, 'destroy'])->name('sites.destroy');
 Route::post('/sites/restart-service', [SiteController::class, 'restartService'])->name('sites.restart-service');
+Route::get('/sites/installation-logs', [SiteController::class, 'installationLogs'])->name('sites.installation-logs');
+Route::get('/installation-logs', [SiteController::class, 'getInstallationLogs']);
 
 use App\Http\Controllers\SoftwareController;
 Route::get('/software', [SoftwareController::class, 'index'])->name('software.index');
@@ -24,6 +26,7 @@ use App\Http\Controllers\ServicesController;
 Route::get('/services', [ServicesController::class, 'index'])->name('services.index');
 Route::post('/services/restart', [ServicesController::class, 'restart'])->name('services.restart');
 Route::get('/services/logs/{type?}', [ServicesController::class, 'logs'])->name('services.logs');
+Route::post('/services/logs/clear', [ServicesController::class, 'clearLogs'])->name('services.logs-clear');
 Route::get('/services/php', [ServicesController::class, 'phpIni'])->name('services.php');
 Route::post('/services/php', [ServicesController::class, 'savePhpIni'])->name('services.save-php');
 

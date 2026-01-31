@@ -29,6 +29,10 @@
             <input type="checkbox" name="horizon" id="horizon" value="1" class="w-4 h-4 rounded">
             <label for="horizon" class="text-sm">Install Laravel Horizon</label>
         </div>
+        <div class="flex items-center gap-3">
+            <input type="checkbox" name="deployment" id="deployment" value="1" class="w-4 h-4 rounded" checked>
+            <label for="deployment" class="text-sm">Run Laravel Deployment (migrate, storage:link, npm install)</label>
+        </div>
         <div class="flex justify-end">
             <button type="submit" class="btn">Create Project</button>
         </div>
@@ -43,9 +47,6 @@
         <div class="p-5 pb-0">
             <div class="flex items-start justify-between mb-2">
                 <h3 class="text-xl font-bold text-[#1d1d1f] tracking-tight truncate">{{ $site['name'] }}</h3>
-                <span class="badge {{ $site['type'] === 'Laravel' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-gray-50 text-gray-600 border-gray-100' }}">
-                    {{ $site['type'] }}
-                </span>
             </div>
             <a href="{{ $site['url'] }}" target="_blank" class="text-sm text-apple-blue hover:underline font-medium mb-4 block truncate">
                 {{ $site['url'] }}
@@ -116,6 +117,14 @@
                         Edit .env
                     </a>
                     @endif
+                    <form action="{{ route('services.logs-clear') }}" method="POST" onsubmit="return confirm('Clear all logs for this project?')">
+                        @csrf
+                        <input type="hidden" name="type" value="project">
+                        <input type="hidden" name="project" value="{{ $site['name'] }}">
+                        <button type="submit" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                            Clear Logs
+                        </button>
+                    </form>
                     <form action="{{ route('sites.destroy', $site['name']) }}" method="POST" onsubmit="return confirm('Delete this project? Database will be preserved.')">
                         @csrf
                         @method('DELETE')
@@ -150,7 +159,11 @@ function toggleDropdown(e, id) {
 }
 
 // Close on outside click
-document.addEventListener('click', () => {
+document.addEventListener('click', (e) => {
+    // Don't close if click is inside a dropdown menu
+    if (e.target.closest('.dropdown-menu')) {
+        return;
+    }
     document.querySelectorAll('.dropdown-menu').forEach(el => el.classList.add('hidden'));
 });
 </script>

@@ -17,12 +17,14 @@ class CreateProject implements ShouldQueue
     protected $name;
     protected $repo;
     protected $installHorizon;
+    protected $runDeployment;
 
-    public function __construct(string $name, ?string $repo = null, bool $installHorizon = false)
+    public function __construct(string $name, ?string $repo = null, bool $installHorizon = false, bool $runDeployment = false)
     {
         $this->name = $name;
         $this->repo = $repo;
         $this->installHorizon = $installHorizon;
+        $this->runDeployment = $runDeployment;
     }
 
     public function handle(): void
@@ -34,7 +36,7 @@ class CreateProject implements ShouldQueue
         $composer = '/usr/local/bin/composer';
         if (!file_exists($composer)) $composer = '/usr/bin/composer';
         
-        Log::info("Job Start: Creating $name (Repo: " . ($this->repo ?: 'None') . ", Horizon: " . ($this->installHorizon?'Yes':'No') . ")");
+        Log::info("Job Start: Creating $name (Repo: " . ($this->repo ?: 'None') . ", Horizon: " . ($this->installHorizon?'Yes':'No') . ", Deployment: " . ($this->runDeployment?'Yes':'No') . ")");
 
         try {
             // 1. Create Folder / Clone
@@ -159,13 +161,28 @@ EOF;
                 Process::run("sudo supervisorctl start {$name}-horizon");
             }
 
-            // 7. Finalize
-            Process::path($projectPath)->run(['php', 'artisan', 'migrate', '--force']);
-            Process::path($projectPath)->run(['php', 'artisan', 'storage:link']);
-            Process::path($projectPath)->run(['npm', 'install']);
-            // npm run build is slow and might fail without proper environment, optional or async
+            // 7. Deployment Steps (Optional)
+            if ($this->runDeployment) {
+                Log::info("Running Laravel deployment steps...");
+                
+                // Run migrations
+                Log::info("Running migrations...");
+                Process::path($projectPath)->run(['php', 'artisan', 'migrate', '--force']);
+                
+                // Storage link
+                Log::info("Creating storage link...");
+                Process::path($projectPath)->run(['php', 'artisan', 'storage:link']);
+                
+                // NPM install and build
+                Log::info("Installing NPM dependencies...");
+                Process::path($projectPath)->run(['npm', 'install']);
+                
+                // Optional: Cache clear
+                Process::path($projectPath)->run(['php', 'artisan', 'config:cache']);
+                Process::path($projectPath)->run(['php', 'artisan', 'route:cache']);
+            }
 
-            // Permissions
+            // 8. Finalize - Set Permissions
             Process::run(["sudo", "chown", "-R", "alp:www-data", "$projectPath"]);
             Process::run(["sudo", "chmod", "-R", "775", "$projectPath/storage"]);
             Process::run(["sudo", "chmod", "-R", "775", "$projectPath/bootstrap/cache"]);

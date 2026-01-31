@@ -238,6 +238,7 @@ class SiteController extends Controller
         $name = $request->name;
         $repo = $request->input('repo');
         $installHorizon = $request->has('horizon');
+        $runDeployment = $request->has('deployment');
 
         $path = "/var/www/projects/{$name}";
 
@@ -252,9 +253,10 @@ class SiteController extends Controller
         }
 
         // Dispatch Job with new params
-        CreateProject::dispatch($name, $repo, $installHorizon);
+        CreateProject::dispatch($name, $repo, $installHorizon, $runDeployment);
 
-        return back()->with('success', "Project installation started for '$name'. Check Horizon status later.");
+        return redirect()->route('sites.installation-logs')
+            ->with('success', "Project installation started for '$name'. Follow the logs below.");
     }
 
     public function destroy($site)
@@ -292,5 +294,24 @@ class SiteController extends Controller
             Log::error("Failed to delete project $site: " . $e->getMessage());
             return back()->with('error', "Failed to delete project: " . $e->getMessage());
         }
+    }
+
+    public function installationLogs()
+    {
+        return view('sites.installation-logs');
+    }
+
+    public function getInstallationLogs()
+    {
+        $logPath = storage_path('logs/laravel.log');
+        $content = '';
+
+        if (File::exists($logPath)) {
+            // Get last 500 lines
+            $result = Process::run("tail -n 500 " . escapeshellarg($logPath));
+            $content = $result->output();
+        }
+
+        return response()->json(['content' => $content]);
     }
 }
