@@ -36,4 +36,31 @@ class DatabaseController extends Controller
             return back()->with('error', $e->getMessage());
         }
     }
+
+    public function createDatabase(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|alpha_dash',
+            'password' => 'required|string|min:6'
+        ]);
+
+        $name = $request->name;
+        $password = $request->password;
+
+        try {
+            // Create database
+            DB::statement("CREATE DATABASE \"{$name}\"");
+            
+            // Create user with password
+            DB::statement("CREATE USER \"{$name}\" WITH PASSWORD '{$password}'");
+            
+            // Grant privileges
+            DB::statement("GRANT ALL PRIVILEGES ON DATABASE \"{$name}\" TO \"{$name}\"");
+            DB::statement("ALTER DATABASE \"{$name}\" OWNER TO \"{$name}\"");
+
+            return back()->with('success', "Database '{$name}' created successfully with user '{$name}'.");
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to create database: ' . $e->getMessage());
+        }
+    }
 }

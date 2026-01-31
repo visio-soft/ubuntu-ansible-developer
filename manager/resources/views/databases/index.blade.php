@@ -1,18 +1,34 @@
 @extends('layouts.app')
 
 @section('content')
-<header class="mb-12">
-    <h1 class="text-4xl font-semibold tracking-tight text-[#1d1d1f]">Databases</h1>
-    <p class="text-apple-grey mt-2">Manage your PostgreSQL databases.</p>
+<header class="mb-8 flex items-center justify-between">
+    <div>
+        <h1 class="text-4xl font-semibold tracking-tight text-[#1d1d1f]">Databases</h1>
+        <p class="text-apple-grey mt-2">Manage your PostgreSQL databases.</p>
+    </div>
+    <button onclick="document.getElementById('createDbForm').classList.toggle('hidden')" class="btn">
+        New Database +
+    </button>
 </header>
 
-<!-- Create Database -->
-<div class="card mb-12">
-    <h2 class="text-lg font-semibold mb-6">New Database</h2>
-    <form action="{{ route('databases.store') }}" method="POST" class="flex gap-4">
+<!-- Create Database Form (Hidden by default) -->
+<div id="createDbForm" class="card mb-12 hidden">
+    <h2 class="text-lg font-semibold mb-6">Create PostgreSQL Database</h2>
+    <form action="{{ route('databases.create') }}" method="POST" class="space-y-4">
         @csrf
-        <input type="text" name="name" placeholder="database_name" class="input-field flex-1" required>
-        <button type="submit" class="btn">Create</button>
+        <div>
+            <label class="block text-sm text-apple-grey mb-2">Database Name</label>
+            <input type="text" name="name" placeholder="my_database" class="input-field" required>
+            <p class="text-xs text-apple-grey mt-1">A PostgreSQL user with the same name will be created</p>
+        </div>
+        <div>
+            <label class="block text-sm text-apple-grey mb-2">Password</label>
+            <input type="password" name="password" placeholder="Minimum 6 characters" class="input-field" required>
+        </div>
+        <div class="flex justify-end gap-3">
+            <button type="button" onclick="document.getElementById('createDbForm').classList.add('hidden')" class="btn-secondary">Cancel</button>
+            <button type="submit" class="btn">Create Database</button>
+        </div>
     </form>
 </div>
 

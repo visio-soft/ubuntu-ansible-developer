@@ -18,13 +18,15 @@ class CreateProject implements ShouldQueue
     protected $repo;
     protected $installHorizon;
     protected $runDeployment;
+    protected $createDatabase;
 
-    public function __construct(string $name, ?string $repo = null, bool $installHorizon = false, bool $runDeployment = false)
+    public function __construct(string $name, ?string $repo = null, bool $installHorizon = false, bool $runDeployment = false, bool $createDatabase = true)
     {
         $this->name = $name;
         $this->repo = $repo;
         $this->installHorizon = $installHorizon;
         $this->runDeployment = $runDeployment;
+        $this->createDatabase = $createDatabase;
     }
 
     public function handle(): void
@@ -109,12 +111,14 @@ EOF;
             // 3. Update Hosts
              Process::run("echo '127.0.0.1 {$name}.test' | sudo tee -a /etc/hosts");
 
-            // 4. Database
-            Log::info("Setting up Database...");
-            Process::run(["sudo", "-u", "postgres", "psql", "-c", "CREATE DATABASE \"{$name}\";"]);
-            Process::run(["sudo", "-u", "postgres", "psql", "-c", "CREATE USER \"{$name}\" WITH PASSWORD 'secret';"]);
-            Process::run(["sudo", "-u", "postgres", "psql", "-c", "GRANT ALL PRIVILEGES ON DATABASE \"{$name}\" TO \"{$name}\";"]);
-            Process::run(["sudo", "-u", "postgres", "psql", "-c", "ALTER DATABASE \"{$name}\" OWNER TO \"{$name}\";"]);
+            // 4. Database (Optional)
+            if ($this->createDatabase) {
+                Log::info("Setting up Database...");
+                Process::run(["sudo", "-u", "postgres", "psql", "-c", "CREATE DATABASE \"{$name}\";"]);
+                Process::run(["sudo", "-u", "postgres", "psql", "-c", "CREATE USER \"{$name}\" WITH PASSWORD 'secret';"]);
+                Process::run(["sudo", "-u", "postgres", "psql", "-c", "GRANT ALL PRIVILEGES ON DATABASE \"{$name}\" TO \"{$name}\";"]);
+                Process::run(["sudo", "-u", "postgres", "psql", "-c", "ALTER DATABASE \"{$name}\" OWNER TO \"{$name}\";"]);
+            }
 
             // 5. Env
             Log::info("Updating .env...");

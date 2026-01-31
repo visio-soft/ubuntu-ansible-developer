@@ -38,6 +38,10 @@
                 <label for="horizon" class="text-sm">Install Laravel Horizon</label>
             </div>
             <div class="flex items-center gap-3">
+                <input type="checkbox" name="database" id="database" value="1" class="w-4 h-4 rounded" checked>
+                <label for="database" class="text-sm">Create PostgreSQL Database</label>
+            </div>
+            <div class="flex items-center gap-3">
                 <input type="checkbox" name="deployment" id="deployment" value="1" class="w-4 h-4 rounded" checked>
                 <label for="deployment" class="text-sm">Run Laravel Deployment (migrate, storage:link, npm install)</label>
             </div>
@@ -97,9 +101,14 @@
         <!-- Action Footer -->
         <div class="mt-auto border-t border-gray-100 bg-gray-50/50 p-2 flex items-center justify-between">
             <div class="flex gap-1">
-                <a href="file://{{ $site['path'] }}" 
+                <a href="{{ route('sites.terminal', $site['name']) }}" 
                    class="flex items-center justify-center w-8 h-8 rounded hover:bg-white hover:shadow-sm transition-all text-gray-500 hover:text-gray-800" 
-                   title="Open Project Folder">
+                   title="Open in Terminal">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                </a>
+                <a href="{{ route('sites.folder', $site['name']) }}" 
+                   class="flex items-center justify-center w-8 h-8 rounded hover:bg-white hover:shadow-sm transition-all text-gray-500 hover:text-gray-800" 
+                   title="Open Folder">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
                 </a>
                 <a href="{{ route('services.logs', ['type' => 'project', 'project' => $site['name']]) }}" 

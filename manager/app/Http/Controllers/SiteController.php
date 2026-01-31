@@ -125,31 +125,66 @@ class SiteController extends Controller
 
     private function verifyGitAccess($repo)
     {
-        // Check if it's SSH
-        if (!str_starts_with($repo, 'git@')) {
-            return ['status' => 'ok']; // naive check for https
-        }
-
-        // Test SSH connection to host (usually github.com)
-        preg_match('/@(.*):/', $repo, $matches);
-        $host = $matches[1] ?? 'github.com';
-
-        $keyPath = '/home/alp/.ssh/id_ed25519';
-        // Use IdentitiesOnly=yes and explicit key path to avoid picking up the readonly key
-        $cmd = "sudo -u alp ssh -T -o BatchMode=yes -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i $keyPath git@$host 2>&1";
-        $result = Process::run($cmd);
-        $output = $result->output();
-
-        if (str_contains($output, 'successfully authenticated')) {
-            return ['status' => 'ok'];
-        } else {
+        // Basic format validation
+        if (empty($repo) || strlen($repo) < 10) {
             return [
                 'status' => 'error',
-                'message' => 'Access denied: ' . trim($output),
-                'key_guide' => 'Please add the public key below to your GitHub account.',
+                'message' => 'Invalid repository URL format',
                 'public_key' => $this->getPublicKey()
             ];
         }
+
+        // Check if it's SSH format (git@github.com:user/repo.git)
+        if (str_starts_with($repo, 'git@')) {
+            // Extract host from SSH URL
+            if (!preg_match('/^git@([^:]+):(.+)\.git$/', $repo, $matches)) {
+                return [
+                    'status' => 'error',
+                    'message' => 'Invalid SSH URL format. Expected: git@github.com:user/repo.git',
+                    'public_key' => $this->getPublicKey()
+                ];
+            }
+            
+            $host = $matches[1];
+            
+            // Test SSH connection
+            $keyPath = '/home/alp/.ssh/id_ed25519';
+            $cmd = "sudo -u alp ssh -T -o BatchMode=yes -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i $keyPath git@$host 2>&1";
+            $result = Process::run($cmd);
+            $output = $result->output();
+
+            if (str_contains($output, 'successfully authenticated')) {
+                return ['status' => 'ok'];
+            } else {
+                return [
+                    'status' => 'error',
+                    'message' => 'SSH access denied. Please add the public key to your Git provider.',
+                    'public_key' => $this->getPublicKey()
+                ];
+            }
+        }
+        
+        // Check if it's HTTPS format
+        if (str_starts_with($repo, 'https://')) {
+            if (!filter_var($repo, FILTER_VALIDATE_URL)) {
+                return [
+                    'status' => 'error',
+                    'message' => 'Invalid HTTPS URL format',
+                    'public_key' => $this->getPublicKey()
+                ];
+            }
+            
+            // For HTTPS, we can't easily verify access without credentials
+            // So we just validate the format
+            return ['status' => 'ok'];
+        }
+
+        // Invalid format
+        return [
+            'status' => 'error',
+            'message' => 'Repository URL must start with git@ or https://',
+            'public_key' => $this->getPublicKey()
+        ];
     }
 
     private function getPublicKey()
@@ -239,6 +274,7 @@ class SiteController extends Controller
         $repo = $request->input('repo');
         $installHorizon = $request->has('horizon');
         $runDeployment = $request->has('deployment');
+        $createDatabase = $request->has('database');
 
         $path = "/var/www/projects/{$name}";
 
@@ -252,8 +288,8 @@ class SiteController extends Controller
             return back()->with('error', 'Git access denied. Please verify your SSH key before creating.');
         }
 
-        // Dispatch Job with new params
-        CreateProject::dispatch($name, $repo, $installHorizon, $runDeployment);
+        // Dispatch Job with all params
+        CreateProject::dispatch($name, $repo, $installHorizon, $runDeployment, $createDatabase);
 
         return redirect()->route('sites.installation-logs')
             ->with('success', "Project installation started for '$name'. Follow the logs below.");
@@ -313,5 +349,39 @@ class SiteController extends Controller
         }
 
         return response()->json(['content' => $content]);
+    }
+
+    public function openInTerminal($site)
+    {
+        $path = "/var/www/projects/{$site}";
+        
+        if (!File::exists($path)) {
+            return back()->with('error', 'Project not found.');
+        }
+
+        // Open GNOME Terminal in the project directory
+        // Use sudo -u alp since PHP-FPM runs as www-data but GUI apps need user session
+        // DBUS_SESSION_BUS_ADDRESS needed for gnome-terminal to communicate with session bus
+        $uid = 1000; // alp user ID
+        $cmd = "sudo -u alp DISPLAY=:0 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/{$uid}/bus gnome-terminal --working-directory=" . escapeshellarg($path) . " > /dev/null 2>&1 &";
+        Process::run($cmd);
+
+        return back()->with('success', 'Terminal opened for ' . $site);
+    }
+
+    public function openInFolder($site)
+    {
+        $path = "/var/www/projects/{$site}";
+        
+        if (!File::exists($path)) {
+            return back()->with('error', 'Project not found.');
+        }
+
+        // Use xdg-open (freedesktop.org standard) - works across GNOME, KDE, XFCE, etc.
+        // Use sudo -u alp since PHP-FPM runs as www-data but GUI apps need user session
+        $cmd = "sudo -u alp DISPLAY=:0 xdg-open " . escapeshellarg($path) . " > /dev/null 2>&1 &";
+        Process::run($cmd);
+
+        return back()->with('success', 'Folder opened for ' . $site);
     }
 }

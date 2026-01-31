@@ -17,6 +17,8 @@ Route::delete('/sites/{site}', [SiteController::class, 'destroy'])->name('sites.
 Route::post('/sites/restart-service', [SiteController::class, 'restartService'])->name('sites.restart-service');
 Route::get('/sites/installation-logs', [SiteController::class, 'installationLogs'])->name('sites.installation-logs');
 Route::get('/installation-logs', [SiteController::class, 'getInstallationLogs']);
+Route::get('/sites/{site}/terminal', [SiteController::class, 'openInTerminal'])->name('sites.terminal');
+Route::get('/sites/{site}/folder', [SiteController::class, 'openInFolder'])->name('sites.folder');
 
 use App\Http\Controllers\SoftwareController;
 Route::get('/software', [SoftwareController::class, 'index'])->name('software.index');
@@ -32,3 +34,4 @@ Route::post('/services/php', [ServicesController::class, 'savePhpIni'])->name('s
 
 Route::get('/databases', [DatabaseController::class, 'index'])->name('databases.index');
 Route::post('/databases', [DatabaseController::class, 'store'])->name('databases.store');
+Route::post('/databases/create', [DatabaseController::class, 'createDatabase'])->name('databases.create');
