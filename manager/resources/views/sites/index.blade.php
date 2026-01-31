@@ -18,8 +18,7 @@
         <div>
             <label class="block text-xs font-semibold text-apple-grey mb-1 uppercase tracking-wider">GitHub Repository (SSH Recommended)</label>
             <div class="flex gap-2">
-                <input type="text" name="repo" id="repo" placeholder="git@github.com:username/repo.git" class="input-field grow">
-                <button type="button" class="btn btn-secondary !px-4" onclick="checkGit()">Check Access</button>
+                <input type="text" name="repo" id="repo" placeholder="git@github.com:username/repo.git" class="input-field grow" autocomplete="off">
             </div>
             <div id="gitMessage" class="mt-2 text-xs hidden"></div>
         </div>
@@ -36,7 +35,7 @@
             <label for="horizon" class="cursor-pointer">Install & Configure Laravel Horizon</label>
         </div>
 
-        <button type="submit" class="btn w-full">Create Project</button>
+        <button type="submit" id="submitBtn" class="btn w-full">Create Project</button>
     </form>
 </div>
 
@@ -55,36 +54,70 @@
                 </div>
             </div>
             
-            <div class="text-[0.8rem] text-apple-grey space-y-1">
+            <div class="text-[0.8rem] text-apple-grey space-y-1.5">
                 <span class="block">Path: {{ $site['path'] }}</span>
+                <span class="block flex items-center gap-1.5 font-medium text-apple-grey">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
+                    Database: <span class="text-apple-dark">{{ $site['db_name'] }}</span>
+                </span>
             </div>
 
-            @if($site['type'] === 'Laravel')
-            <div class="mt-4 pt-4 border-t border-apple-border flex items-center justify-between">
-                <span class="text-[0.8rem] font-medium">Horizon Status</span>
-                @if($site['horizon'] === 'running')
-                    <span class="badge bg-green-500/10 text-green-600 flex items-center normal-case">
-                         <span class="w-2 h-2 bg-green-500 rounded-full mr-1.5 animate-pulse"></span> Active
-                    </span>
-                @else
-                     <span class="badge bg-gray-500/10 text-gray-500 normal-case">
-                         Inactive
-                    </span>
+            <div class="mt-6 pt-4 border-t border-apple-border flex flex-col gap-3">
+                @if($site['type'] === 'Laravel')
+                    <div class="flex items-center justify-between">
+                        <span class="text-[0.8rem] font-medium">Horizon Status</span>
+                        @if($site['horizon'] === 'running')
+                            <div class="flex items-center gap-3">
+                                <a href="{{ $site['url'] }}/horizon" target="_blank" class="text-[0.7rem] font-bold text-apple-blue hover:underline uppercase tracking-tight">Open Dashboard</a>
+                                <span class="badge bg-green-500/10 text-green-600 flex items-center normal-case">
+                                     <span class="w-2 h-2 bg-green-500 rounded-full mr-1.5 animate-pulse"></span> Active
+                                </span>
+                            </div>
+                        @else
+                             <span class="badge bg-gray-500/10 text-gray-500 normal-case">
+                                 Inactive
+                            </span>
+                        @endif
+                    </div>
                 @endif
+                
+                <div class="flex gap-2">
+                    @if($site['env_exists'])
+                        <a href="{{ route('sites.env', $site['name']) }}" class="btn-secondary !py-1.5 !text-[11px] font-bold uppercase tracking-tight grow justify-center">Edit .env</a>
+                    @endif
+                    <form action="{{ route('sites.destroy', $site['name']) }}" method="POST" onsubmit="return confirm('Silmek istediğine emin misin? Bu işlem projeyi ve yapılandırmaları tamamen silecektir (Veritabanı korunur).')">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn-secondary !py-1.5 !px-3 hover:!bg-red-50 hover:!text-red-500 hover:!border-red-200 transition-colors" title="Delete Project">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-4v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </form>
+                </div>
             </div>
-            @endif
         </div>
     @endforeach
 </div>
 
 <script>
+let checkTimeout;
+const repoInput = document.getElementById('repo');
+const submitBtn = document.getElementById('submitBtn');
+const msg = document.getElementById('gitMessage');
+
+repoInput.addEventListener('input', () => {
+    clearTimeout(checkTimeout);
+    msg.textContent = 'Typing...';
+    msg.className = 'mt-2 text-xs text-apple-grey block';
+    
+    checkTimeout = setTimeout(checkGit, 800);
+});
+
 async function checkGit() {
-    const repo = document.getElementById('repo').value;
-    const msg = document.getElementById('gitMessage');
+    const repo = repoInput.value;
     
     if (!repo) {
-        msg.textContent = 'Please enter a repository URL.';
-        msg.className = 'mt-2 text-xs text-red-500 block';
+        msg.textContent = '';
+        msg.className = 'mt-2 text-xs hidden';
         return;
     }
 

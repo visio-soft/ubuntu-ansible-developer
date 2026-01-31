@@ -11,7 +11,7 @@ class DatabaseController extends Controller
     {
         // Lists databases
         // We use the configured pgsql connection
-        $databases = DB::select("SELECT datname FROM pg_database WHERE datistemplate = false;");
+        $databases = DB::select("SELECT datname, pg_database_size(datname) as size FROM pg_database WHERE datistemplate = false;");
         
         // Filter out system dbs if needed
         $dbs = array_filter($databases, function($db) {

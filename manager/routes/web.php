@@ -11,6 +11,9 @@ Route::get('/', function () {
 Route::get('/sites/check-git', [SiteController::class, 'checkGit'])->name('sites.check-git');
 Route::get('/sites', [SiteController::class, 'index'])->name('sites.index');
 Route::post('/sites', [SiteController::class, 'store'])->name('sites.store');
+Route::get('/sites/env/{site}', [SiteController::class, 'editEnv'])->name('sites.env');
+Route::post('/sites/env/{site}', [SiteController::class, 'saveEnv'])->name('sites.save-env');
+Route::delete('/sites/{site}', [SiteController::class, 'destroy'])->name('sites.destroy');
 
 use App\Http\Controllers\SoftwareController;
 Route::get('/software', [SoftwareController::class, 'index'])->name('software.index');
